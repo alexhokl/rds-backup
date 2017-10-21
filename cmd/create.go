@@ -17,6 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ type createOptions struct {
 	databaseName string
 	filename     string
 	bucketName   string
+	isDownload   bool
 }
 
 func init() {
@@ -49,6 +51,7 @@ func init() {
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
+	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -68,16 +71,66 @@ func runCreate(opts createOptions) error {
 		BucketName: opts.bucketName,
 		Filename:   opts.filename,
 	}
-	output, err := client.StartBackup(params)
+	taskID, err := client.StartBackup(params)
 	if err != nil {
 		return err
 	}
-	if output == "" {
+	if taskID == "" {
 		return errors.New("Unable to create a backup task")
 	}
-	fmt.Printf("Backup task [%s] started...", output)
+	fmt.Printf("Backup task [%s] started...\n", taskID)
+
+	if opts.isDownload {
+		errDownload := checkStatusAndDownload(params, taskID)
+		if errDownload != nil {
+			return errDownload
+		}
+
+		fmt.Println("Download of the backup is completed")
+	}
 
 	return nil
+}
+
+func checkStatusAndDownload(params *client.BackupParameters, taskID string) error {
+	fmt.Printf("Checking if task [%s] is completed", taskID)
+
+	done := false
+	var err error = nil
+
+	for !done {
+		fmt.Printf(".")
+		time.Sleep(5 * time.Second)
+		done, err = isBackupDone(&params.DatabaseParameters, taskID)
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Backup completed. Starting to download...")
+
+	return client.DownloadBackup(params.BucketName, params.Filename)
+}
+
+func isBackupDone(params *client.DatabaseParameters, taskID string) (bool, error) {
+	status, err := client.GetStatus(params, taskID)
+	if err != nil {
+		return false, err
+	}
+	if status == "ERROR" {
+		errorMessage, errErr := client.GetTaskMessage(params)
+		if errErr != nil {
+			return false, errErr
+		}
+		fmt.Println(errorMessage)
+		return false, errors.New(errorMessage)
+	}
+	return status == "SUCCESS", nil
 }
 
 func validateCreateOptions(opts createOptions) error {

@@ -61,7 +61,7 @@ func runStatus(opts statusOptions) error {
 		Password:     viper.GetString("password"),
 		DatabaseName: opts.databaseName,
 	}
-	output, err := client.GetStatus(params)
+	output, err := client.GetStatus(params, "")
 	if err != nil {
 		return err
 	}

@@ -52,7 +52,12 @@ const createTableDeclaration = `DECLARE @s TABLE (
 )`
 
 // GetStatus returns the status of the latest backup
-func GetStatus(params *DatabaseParameters) (string, error) {
+func GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+	query := "SELECT TOP 1 lifecycle FROM @s"
+	if taskID != "" {
+		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
+	}
+
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -60,9 +65,9 @@ func GetStatus(params *DatabaseParameters) (string, error) {
 	INSERT INTO @s
 	exec msdb.dbo.rds_task_status @db_name='%s'
 
-	SELECT TOP 1 lifecycle FROM @s
+	%s
 
-	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
+	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
 	args := getCommandArgs(params, statement)
 	output, err := execute(args)
