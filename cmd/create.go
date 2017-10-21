@@ -72,9 +72,9 @@ func runCreate(opts createOptions) error {
 		Filename:   opts.filename,
 	}
 
-	c := client.DockerSqlClient{}
-	if !c.IsEnvironmentSatisfied() {
-		return errors.New("MSSQL server Docker container 'mssql' is not running")
+	c := client.GetClient()
+	if c == nil {
+		return errors.New("Unable to find a sqlcmd client")
 	}
 
 	taskID, err := c.StartBackup(params)

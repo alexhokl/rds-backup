@@ -7,3 +7,15 @@ type SqlClient interface {
 	GetTaskMessage(*DatabaseParameters) (string, error)
 	StartBackup(*BackupParameters) (string, error)
 }
+
+func GetClient() SqlClient {
+	nativeCli := NativeClient{}
+	if nativeCli.IsEnvironmentSatisfied() {
+		return nativeCli
+	}
+	dockerCli := DockerSqlClient{}
+	if dockerCli.IsEnvironmentSatisfied() {
+		return dockerCli
+	}
+	return nil
+}

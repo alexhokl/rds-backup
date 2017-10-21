@@ -62,9 +62,9 @@ func runStatus(opts statusOptions) error {
 		DatabaseName: opts.databaseName,
 	}
 
-	c := client.DockerSqlClient{}
-	if !c.IsEnvironmentSatisfied() {
-		return errors.New("MSSQL server Docker container 'mssql' is not running")
+	c := client.GetClient()
+	if c == nil {
+		return errors.New("Unable to find a sqlcmd client")
 	}
 
 	output, err := c.GetStatus(params, "")
