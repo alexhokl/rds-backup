@@ -15,36 +15,75 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-// statusCmd represents the status command
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("status called")
-	},
+type statusOptions struct {
+	databaseName string
 }
 
 func init() {
+
+	opts := statusOptions{}
+
+	var statusCmd = &cobra.Command{
+		Use:   "status",
+		Short: "Show the status of the latest backup",
+		Long:  "Show the status of the latest backup",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := runStatus(opts)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		},
+	}
+
+	flags := statusCmd.Flags()
+	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+
 	RootCmd.AddCommand(statusCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func runStatus(opts statusOptions) error {
+	errOpt := validateStatusOptions(opts)
+	if errOpt != nil {
+		return errOpt
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// statusCmd.PersistentFlags().String("foo", "", "A help for foo")
+	params := &client.DatabaseParameters{
+		Server:       viper.GetString("server"),
+		Username:     viper.GetString("username"),
+		Password:     viper.GetString("password"),
+		DatabaseName: opts.databaseName,
+	}
+	output, err := client.GetStatus(params)
+	if err != nil {
+		return err
+	}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// statusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	if output == "ERROR" {
+		errorMessage, errErr := client.GetTaskMessage(params)
+		if errErr != nil {
+			return errErr
+		}
+		fmt.Println(errorMessage)
+		return nil
+	}
+
+	fmt.Println(output)
+
+	return nil
+}
+
+func validateStatusOptions(opts statusOptions) error {
+	if opts.databaseName == "" {
+		return errors.New("Database must be specified")
+	}
+
+	return nil
 }

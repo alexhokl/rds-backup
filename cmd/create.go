@@ -15,36 +15,81 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-// createCmd represents the create command
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("create called")
-	},
+type createOptions struct {
+	databaseName string
+	filename     string
+	bucketName   string
 }
 
 func init() {
+
+	opts := createOptions{}
+
+	var createCmd = &cobra.Command{
+		Use:   "create",
+		Short: "Creates a new backup",
+		Long:  "Creates a new backup",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := runCreate(opts)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		},
+	}
+
+	flags := createCmd.Flags()
+	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
+	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
+
 	RootCmd.AddCommand(createCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func runCreate(opts createOptions) error {
+	errOpt := validateCreateOptions(opts)
+	if errOpt != nil {
+		return errOpt
+	}
+	params := &client.BackupParameters{
+		DatabaseParameters: client.DatabaseParameters{
+			Server:       viper.GetString("server"),
+			Username:     viper.GetString("username"),
+			Password:     viper.GetString("password"),
+			DatabaseName: opts.databaseName,
+		},
+		BucketName: opts.bucketName,
+		Filename:   opts.filename,
+	}
+	output, err := client.StartBackup(params)
+	if err != nil {
+		return err
+	}
+	if output == "" {
+		return errors.New("Unable to create a backup task")
+	}
+	fmt.Printf("Backup task [%s] started...", output)
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
+	return nil
+}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func validateCreateOptions(opts createOptions) error {
+	if opts.databaseName == "" {
+		return errors.New("Database must be specified")
+	}
+	if opts.bucketName == "" {
+		return errors.New("Bucket must be specified")
+	}
+	if opts.filename == "" {
+		return errors.New("Filename must be specified")
+	}
+
+	return nil
 }
