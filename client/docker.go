@@ -51,8 +51,24 @@ const createTableDeclaration = `DECLARE @s TABLE (
 	task_info VARCHAR(MAX)
 )`
 
+type DockerSqlClient struct{}
+
+func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
+	args := []string{
+		"inspect",
+		"-f",
+		"'{{.State.Running}}'",
+		"mssql",
+	}
+	_, err := execute(args)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 // GetStatus returns the status of the latest backup
-func GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -78,7 +94,7 @@ func GetStatus(params *DatabaseParameters, taskID string) (string, error) {
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -99,7 +115,7 @@ func GetCompletionPercentage(params *DatabaseParameters) (string, error) {
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -120,7 +136,7 @@ func GetTaskMessage(params *DatabaseParameters) (string, error) {
 }
 
 // StartBackup creates a new backup
-func StartBackup(params *BackupParameters) (string, error) {
+func (c DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s

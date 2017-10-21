@@ -61,13 +61,19 @@ func runStatus(opts statusOptions) error {
 		Password:     viper.GetString("password"),
 		DatabaseName: opts.databaseName,
 	}
-	output, err := client.GetStatus(params, "")
+
+	c := client.DockerSqlClient{}
+	if !c.IsEnvironmentSatisfied() {
+		return errors.New("MSSQL server Docker container 'mssql' is not running")
+	}
+
+	output, err := c.GetStatus(params, "")
 	if err != nil {
 		return err
 	}
 
 	if output == "ERROR" {
-		errorMessage, errErr := client.GetTaskMessage(params)
+		errorMessage, errErr := c.GetTaskMessage(params)
 		if errErr != nil {
 			return errErr
 		}

@@ -71,7 +71,13 @@ func runCreate(opts createOptions) error {
 		BucketName: opts.bucketName,
 		Filename:   opts.filename,
 	}
-	taskID, err := client.StartBackup(params)
+
+	c := client.DockerSqlClient{}
+	if !c.IsEnvironmentSatisfied() {
+		return errors.New("MSSQL server Docker container 'mssql' is not running")
+	}
+
+	taskID, err := c.StartBackup(params)
 	if err != nil {
 		return err
 	}
@@ -81,7 +87,7 @@ func runCreate(opts createOptions) error {
 	fmt.Printf("Backup task [%s] started...\n", taskID)
 
 	if opts.isDownload {
-		errDownload := checkStatusAndDownload(params, taskID)
+		errDownload := checkStatusAndDownload(c, params, taskID)
 		if errDownload != nil {
 			return errDownload
 		}
@@ -92,7 +98,7 @@ func runCreate(opts createOptions) error {
 	return nil
 }
 
-func checkStatusAndDownload(params *client.BackupParameters, taskID string) error {
+func checkStatusAndDownload(c client.SqlClient, params *client.BackupParameters, taskID string) error {
 	fmt.Printf("Checking if task [%s] is completed", taskID)
 
 	done := false
@@ -101,7 +107,7 @@ func checkStatusAndDownload(params *client.BackupParameters, taskID string) erro
 	for !done {
 		fmt.Printf(".")
 		time.Sleep(5 * time.Second)
-		done, err = isBackupDone(&params.DatabaseParameters, taskID)
+		done, err = isBackupDone(c, &params.DatabaseParameters, taskID)
 		if err != nil {
 			return err
 		}
@@ -117,13 +123,13 @@ func checkStatusAndDownload(params *client.BackupParameters, taskID string) erro
 	return client.DownloadBackup(params.BucketName, params.Filename)
 }
 
-func isBackupDone(params *client.DatabaseParameters, taskID string) (bool, error) {
-	status, err := client.GetStatus(params, taskID)
+func isBackupDone(c client.SqlClient, params *client.DatabaseParameters, taskID string) (bool, error) {
+	status, err := c.GetStatus(params, taskID)
 	if err != nil {
 		return false, err
 	}
 	if status == "ERROR" {
-		errorMessage, errErr := client.GetTaskMessage(params)
+		errorMessage, errErr := c.GetTaskMessage(params)
 		if errErr != nil {
 			return false, errErr
 		}
