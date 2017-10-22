@@ -60,8 +60,8 @@ func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
 		"'{{.State.Running}}'",
 		"mssql",
 	}
-	_, err := execute(args)
-	if err != nil {
+	output, err := execute(args)
+	if err != nil || strings.Contains(output, "false") {
 		return false
 	}
 	return true
