@@ -72,7 +72,7 @@ func initConfig() {
 		viper.SetConfigName(".rds-backup")
 	}
 
-	viper.SetEnvPrefix("RDS_BACKUP_")
+	viper.SetEnvPrefix("rds_backup")
 
 	viper.AutomaticEnv() // read in environment variables that match
 
