@@ -3,8 +3,11 @@ package client
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // DatabaseParameters contains the database information
@@ -165,6 +168,65 @@ func (c DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
 		return "", errors.New(output)
 	}
 	return strings.TrimSpace(lines[3]), nil
+}
+
+func Restore(filename string, containerName string, password string, databaseName string, dataName string, logName string) error {
+	_, errFile := os.Stat(filename)
+	if errFile != nil {
+		return errFile
+	}
+
+	currentDirectory, _ := os.Getwd()
+	directoryToMount := filepath.Dir(filepath.Join(currentDirectory, filename))
+
+	createArgs := []string{
+		"run",
+		"--name",
+		containerName,
+		"-p",
+		"1433:1433",
+		"-v",
+		fmt.Sprintf("%s/:/var/backups/", directoryToMount),
+		"-e",
+		fmt.Sprintf("SA_PASSWORD=%s", password),
+		"-e",
+		"ACCEPT_EULA=Y",
+		"-d",
+		"microsoft/mssql-server-linux",
+	}
+
+	_, errCreate := execute(createArgs)
+	if errCreate != nil {
+		return errCreate
+	}
+
+	fmt.Printf("MSSQL container %s is created. Waiting for SQL server to complete initialisation...\n", containerName)
+
+	time.Sleep(90 * time.Second)
+
+	fmt.Println("Restoring...")
+
+	restoreArgs := []string{
+		"exec",
+		"-t",
+		containerName,
+		"/opt/mssql-tools/bin/sqlcmd",
+		"-S",
+		".",
+		"-U",
+		"sa",
+		"-P",
+		password,
+		"-Q",
+		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'/var/backups/%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '/var/opt/mssql/data/%s.mdf', MOVE '%s' TO '/var/opt/mssql/data/%s.ldf'", databaseName, filename, dataName, databaseName, logName, databaseName),
+	}
+
+	_, err := execute(restoreArgs)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Restore is completed.")
+	return nil
 }
 
 func execute(args []string) (string, error) {
