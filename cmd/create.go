@@ -25,10 +25,11 @@ import (
 )
 
 type createOptions struct {
-	databaseName string
-	filename     string
-	bucketName   string
-	isDownload   bool
+	databaseName        string
+	filename            string
+	bucketName          string
+	isDownload          bool
+	isWaitForCompletion bool
 }
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
 	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
+	flags.BoolVarP(&opts.isWaitForCompletion, "wait", "w", false, "Wait for backup to complete")
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -84,23 +86,30 @@ func runCreate(opts createOptions) error {
 	if taskID == "" {
 		return errors.New("Unable to create a backup task")
 	}
-	fmt.Printf("Backup task [%s] started...\n", taskID)
+	fmt.Printf("Backup task [%s] started...", taskID)
+
+	if opts.isDownload || opts.isWaitForCompletion {
+		errBackup := isBackupCompleted(c, params, taskID)
+		if errBackup != nil {
+			return errBackup
+		}
+		fmt.Println("Backup completed.")
+	}
 
 	if opts.isDownload {
-		errDownload := checkStatusAndDownload(c, params, taskID)
+		errDownload := client.DownloadBackup(params.BucketName, params.Filename)
 		if errDownload != nil {
 			return errDownload
 		}
-
 		fmt.Println("Download of the backup is completed")
 	}
+
+	fmt.Println("")
 
 	return nil
 }
 
-func checkStatusAndDownload(c client.SqlClient, params *client.BackupParameters, taskID string) error {
-	fmt.Printf("Checking if task [%s] is completed", taskID)
-
+func isBackupCompleted(c client.SqlClient, params *client.BackupParameters, taskID string) error {
 	done := false
 	var err error = nil
 
@@ -118,9 +127,7 @@ func checkStatusAndDownload(c client.SqlClient, params *client.BackupParameters,
 		return err
 	}
 
-	fmt.Println("Backup completed. Starting to download...")
-
-	return client.DownloadBackup(params.BucketName, params.Filename)
+	return nil
 }
 
 func isBackupDone(c client.SqlClient, params *client.DatabaseParameters, taskID string) (bool, error) {
