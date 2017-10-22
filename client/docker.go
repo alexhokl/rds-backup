@@ -144,7 +144,7 @@ func (c DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
 		INSERT INTO @s
 		exec msdb.dbo.rds_backup_database
 			@source_db_name='%s',
-			@s3_arn_to_backup_to='arn:aws:s3:::%s/%s.bak',
+			@s3_arn_to_backup_to='arn:aws:s3:::%s/%s',
 			@overwrite_S3_backup_file=1;
 
 		SELECT TOP 1 task_id FROM @s

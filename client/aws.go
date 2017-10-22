@@ -9,8 +9,8 @@ func DownloadBackup(bucketName string, filename string) error {
 	args := []string{
 		"s3",
 		"cp",
-		fmt.Sprintf("s3://%s/%s.bak", bucketName, filename),
-		fmt.Sprintf("%s.bak", filename),
+		fmt.Sprintf("s3://%s/%s", bucketName, filename),
+		filename,
 	}
 
 	_, err := executeCommand(args)
