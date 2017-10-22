@@ -229,6 +229,10 @@ func Restore(filename string, containerName string, password string, databaseNam
 	return nil
 }
 
+func GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+
+}
+
 func execute(args []string) (string, error) {
 	byteOutput, err := exec.Command("docker", args...).Output()
 	return string(byteOutput), err

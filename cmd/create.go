@@ -30,6 +30,9 @@ type createOptions struct {
 	bucketName          string
 	isDownload          bool
 	isWaitForCompletion bool
+	isRestore           bool
+	containerName       string
+	password            string
 }
 
 func init() {
@@ -54,6 +57,9 @@ func init() {
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
 	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
 	flags.BoolVarP(&opts.isWaitForCompletion, "wait", "w", false, "Wait for backup to complete")
+	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
+	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
+	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -77,6 +83,12 @@ func runCreate(opts createOptions) error {
 	c := client.GetClient()
 	if c == nil {
 		return errors.New("Unable to find a sqlcmd client")
+	}
+
+	var dataName string
+	var logName string
+	if opts.isRestore {
+		dataName, logName, errLogicalNames := c.GetLogicalNames(&params.DatabaseParameters)
 	}
 
 	taskID, err := c.StartBackup(params)
@@ -105,6 +117,22 @@ func runCreate(opts createOptions) error {
 	}
 
 	fmt.Println("")
+
+	if opts.isRestore {
+		fmt.Println("Starting to restore...")
+		errRestore := client.Restore(
+			opts.filename,
+			opts.containerName,
+			opts.password,
+			opts.databaseName,
+			dataName,
+			logName,
+		)
+		if errRestore != nil {
+			return errRestore
+		}
+		fmt.Println("Restore completed.")
+	}
 
 	return nil
 }
@@ -155,6 +183,15 @@ func validateCreateOptions(opts createOptions) error {
 	}
 	if opts.filename == "" {
 		return errors.New("Filename must be specified")
+	}
+
+	if opts.isRestore {
+		if opts.containerName == "" {
+			return errors.New("Name of container must be specified")
+		}
+		if opts.password == "" {
+			return errors.New("Password must be specified")
+		}
 	}
 
 	return nil

@@ -6,6 +6,7 @@ type SqlClient interface {
 	GetCompletionPercentage(*DatabaseParameters) (string, error)
 	GetTaskMessage(*DatabaseParameters) (string, error)
 	StartBackup(*BackupParameters) (string, error)
+	GetLogicalNames(*DatabaseParameters) (string, string, error)
 }
 
 func GetClient() SqlClient {

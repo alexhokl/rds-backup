@@ -118,6 +118,10 @@ func (c NativeClient) StartBackup(params *BackupParameters) (string, error) {
 	return strings.TrimSpace(lines[3]), nil
 }
 
+func GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+	dataNameQuery := ""
+}
+
 func executeSqlCmd(args []string) (string, error) {
 	byteOutput, err := exec.Command("sqlcmd", args...).Output()
 	return string(byteOutput), err
