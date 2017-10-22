@@ -10,12 +10,11 @@ import (
 type NativeClient struct{}
 
 func (c NativeClient) IsEnvironmentSatisfied() bool {
-	args := []string{}
-	output, err := executeSqlCmd(args)
+	args := []string{ "-?" }
+	_, err := executeSqlCmd(args)
 	if err != nil {
 		return false
 	}
-	fmt.Println(output)
 	return true
 }
 
@@ -38,7 +37,7 @@ func (c NativeClient) GetStatus(params *DatabaseParameters, taskID string) (stri
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
 	args := getSqlCommandArgs(params, statement)
-	output, err := execute(args)
+	output, err := executeSqlCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +58,7 @@ func (c NativeClient) GetCompletionPercentage(params *DatabaseParameters) (strin
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getSqlCommandArgs(params, statement)
-	output, err := execute(args)
+	output, err := executeSqlCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +79,7 @@ func (c NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error)
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getSqlCommandArgs(params, statement)
-	output, err := execute(args)
+	output, err := executeSqlCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +107,7 @@ func (c NativeClient) StartBackup(params *BackupParameters) (string, error) {
 		params.Filename)
 
 	args := getSqlCommandArgs(&params.DatabaseParameters, statement)
-	output, err := execute(args)
+	output, err := executeSqlCmd(args)
 	if err != nil {
 		return "", err
 	}
