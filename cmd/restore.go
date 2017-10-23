@@ -39,6 +39,12 @@ func init() {
 		Short: "Restores the specified backup in a docker container",
 		Long:  "Restores the specified backup in a docker container",
 		Run: func(cmd *cobra.Command, args []string) {
+			errOpt := validateRestoreOptions(opts)
+			if errOpt != nil {
+				fmt.Println(errOpt.Error())
+				cmd.HelpFunc()(cmd, args)
+				return
+			}
 			err := runRestore(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -58,11 +64,6 @@ func init() {
 }
 
 func runRestore(opts restoreOptions) error {
-	errOpts := validateRestoreOptions(opts)
-	if errOpts != nil {
-		return errOpts
-	}
-
 	err := client.Restore(
 		opts.filename,
 		opts.containerName,

@@ -36,6 +36,12 @@ func init() {
 		Short: "Show the status of the latest backup",
 		Long:  "Show the status of the latest backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			errOpt := validateStatusOptions(opts)
+			if errOpt != nil {
+				fmt.Println(errOpt.Error())
+				cmd.HelpFunc()(cmd, args)
+				return
+			}
 			err := runStatus(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -50,11 +56,6 @@ func init() {
 }
 
 func runStatus(opts statusOptions) error {
-	errOpt := validateStatusOptions(opts)
-	if errOpt != nil {
-		return errOpt
-	}
-
 	params := &client.DatabaseParameters{
 		Server:       viper.GetString("server"),
 		Username:     viper.GetString("username"),

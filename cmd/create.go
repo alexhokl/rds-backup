@@ -44,6 +44,12 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			errOpt := validateCreateOptions(opts)
+			if errOpt != nil {
+				fmt.Println(errOpt.Error())
+				cmd.HelpFunc()(cmd, args)
+				return
+			}
 			err := runCreate(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -65,10 +71,6 @@ func init() {
 }
 
 func runCreate(opts createOptions) error {
-	errOpt := validateCreateOptions(opts)
-	if errOpt != nil {
-		return errOpt
-	}
 	params := &client.BackupParameters{
 		DatabaseParameters: client.DatabaseParameters{
 			Server:       viper.GetString("server"),
