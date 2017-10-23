@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 type NativeClient struct{}
@@ -139,6 +141,11 @@ func (c NativeClient) GetLogicalNames(params *DatabaseParameters) (string, strin
 
 func executeSqlCmd(args []string) (string, error) {
 	byteOutput, err := exec.Command("sqlcmd", args...).Output()
+
+	if viper.GetBool("verbose") {
+		fmt.Println("Command executed:", "aws", args)
+	}
+
 	return string(byteOutput), err
 }
 

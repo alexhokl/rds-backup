@@ -25,6 +25,7 @@ import (
 )
 
 type createOptions struct {
+	verbose             bool
 	databaseName        string
 	filename            string
 	bucketName          string
@@ -55,6 +56,7 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
+			viper.Set("verbose", opts.verbose)
 			err := runCreate(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -63,6 +65,7 @@ func init() {
 	}
 
 	flags := createCmd.Flags()
+	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")

@@ -24,6 +24,7 @@ import (
 )
 
 type statusOptions struct {
+	verbose      bool
 	databaseName string
 }
 
@@ -47,6 +48,7 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
+			viper.Set("verbose", opts.verbose)
 			err := runStatus(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -55,6 +57,7 @@ func init() {
 	}
 
 	flags := statusCmd.Flags()
+	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
 
 	RootCmd.AddCommand(statusCmd)

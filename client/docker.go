@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 // DatabaseParameters contains the database information
@@ -250,6 +252,11 @@ func (c DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, st
 
 func execute(args []string) (string, error) {
 	byteOutput, err := exec.Command("docker", args...).Output()
+
+	if viper.GetBool("verbose") {
+		fmt.Println("Command executed:", "aws", args)
+	}
+
 	return string(byteOutput), err
 }
 
