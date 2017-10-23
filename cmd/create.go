@@ -44,6 +44,11 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			errConfig := validateConfig()
+			if errConfig != nil {
+				fmt.Println(errConfig.Error())
+				return
+			}
 			errOpt := validateCreateOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())

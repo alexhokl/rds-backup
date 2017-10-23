@@ -36,6 +36,11 @@ func init() {
 		Short: "Show the status of the latest backup",
 		Long:  "Show the status of the latest backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			errConfig := validateConfig()
+			if errConfig != nil {
+				fmt.Println(errConfig.Error())
+				return
+			}
 			errOpt := validateStatusOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
