@@ -85,10 +85,15 @@ func runCreate(opts createOptions) error {
 		return errors.New("Unable to find a sqlcmd client")
 	}
 
-	var dataName string
-	var logName string
+	dataLogicalName := ""
+	logLogicalName := ""
 	if opts.isRestore {
 		dataName, logName, errLogicalNames := c.GetLogicalNames(&params.DatabaseParameters)
+		if errLogicalNames != nil {
+			return errLogicalNames
+		}
+		dataLogicalName = dataName
+		logLogicalName = logName
 	}
 
 	taskID, err := c.StartBackup(params)
@@ -100,7 +105,7 @@ func runCreate(opts createOptions) error {
 	}
 	fmt.Printf("Backup task [%s] started...", taskID)
 
-	if opts.isDownload || opts.isWaitForCompletion {
+	if opts.isDownload || opts.isWaitForCompletion || opts.isRestore {
 		errBackup := isBackupCompleted(c, params, taskID)
 		if errBackup != nil {
 			return errBackup
@@ -108,7 +113,7 @@ func runCreate(opts createOptions) error {
 		fmt.Println("Backup completed.")
 	}
 
-	if opts.isDownload {
+	if opts.isDownload || opts.isRestore {
 		errDownload := client.DownloadBackup(params.BucketName, params.Filename)
 		if errDownload != nil {
 			return errDownload
@@ -125,8 +130,8 @@ func runCreate(opts createOptions) error {
 			opts.containerName,
 			opts.password,
 			opts.databaseName,
-			dataName,
-			logName,
+			dataLogicalName,
+			logLogicalName,
 		)
 		if errRestore != nil {
 			return errRestore

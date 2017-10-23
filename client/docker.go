@@ -229,8 +229,23 @@ func Restore(filename string, containerName string, password string, databaseNam
 	return nil
 }
 
-func GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+func (c DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
+	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
+	outputData, errData := execute(getCommandArgs(params, dataNameQuery))
+	if errData != nil {
+		return "", "", errData
+	}
+	dataName := getSQLOutput(outputData)
+
+	outputLog, errLog := execute(getCommandArgs(params, logNameQuery))
+	if errLog != nil {
+		return "", "", errLog
+	}
+	logName := getSQLOutput(outputLog)
+
+	return dataName, logName, nil
 }
 
 func execute(args []string) (string, error) {

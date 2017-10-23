@@ -118,8 +118,23 @@ func (c NativeClient) StartBackup(params *BackupParameters) (string, error) {
 	return strings.TrimSpace(lines[3]), nil
 }
 
-func GetLogicalNames(params *DatabaseParameters) (string, string, error) {
-	dataNameQuery := ""
+func (c NativeClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
+	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
+
+	outputData, errData := executeSqlCmd(getSqlCommandArgs(params, dataNameQuery))
+	if errData != nil {
+		return "", "", errData
+	}
+	dataName := getSQLOutput(outputData)
+
+	outputLog, errLog := executeSqlCmd(getSqlCommandArgs(params, logNameQuery))
+	if errLog != nil {
+		return "", "", errLog
+	}
+	logName := getSQLOutput(outputLog)
+
+	return dataName, logName, nil
 }
 
 func executeSqlCmd(args []string) (string, error) {
