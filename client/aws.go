@@ -21,11 +21,9 @@ func DownloadBackup(bucketName string, filename string) error {
 }
 
 func executeCommand(args []string) (string, error) {
-	byteOutput, err := exec.Command("aws", args...).Output()
-
 	if viper.GetBool("verbose") {
 		fmt.Println("Command executed:", "aws", args)
 	}
-
+	byteOutput, err := exec.Command("aws", args...).Output()
 	return string(byteOutput), err
 }

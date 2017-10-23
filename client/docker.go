@@ -251,12 +251,10 @@ func (c DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, st
 }
 
 func execute(args []string) (string, error) {
-	byteOutput, err := exec.Command("docker", args...).Output()
-
 	if viper.GetBool("verbose") {
-		fmt.Println("Command executed:", "aws", args)
+		fmt.Println("Command executed:", "docker", args)
 	}
-
+	byteOutput, err := exec.Command("docker", args...).Output()
 	return string(byteOutput), err
 }
 

@@ -140,12 +140,10 @@ func (c NativeClient) GetLogicalNames(params *DatabaseParameters) (string, strin
 }
 
 func executeSqlCmd(args []string) (string, error) {
-	byteOutput, err := exec.Command("sqlcmd", args...).Output()
-
 	if viper.GetBool("verbose") {
-		fmt.Println("Command executed:", "aws", args)
+		fmt.Println("Command executed:", "sqlcmd", args)
 	}
-
+	byteOutput, err := exec.Command("sqlcmd", args...).Output()
 	return string(byteOutput), err
 }
 
