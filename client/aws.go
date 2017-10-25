@@ -20,6 +20,16 @@ func DownloadBackup(bucketName string, filename string) error {
 	return err
 }
 
+func IsAwsCliInstalled() bool {
+	_, err := executeCommand([]string{"help"})
+	return err == nil
+}
+
+func IsAwsCredentialsConfigured() bool {
+	_, err := executeCommand([]string{"s3", "ls"})
+	return err == nil
+}
+
 func executeCommand(args []string) (string, error) {
 	if viper.GetBool("verbose") {
 		fmt.Println("Command executed:", "aws", args)

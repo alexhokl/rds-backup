@@ -79,6 +79,15 @@ func init() {
 }
 
 func runCreate(opts createOptions) error {
+	if opts.isDownload || opts.isRestore {
+		if !client.IsAwsCliInstalled() {
+			return errors.New("AWS CLI is required")
+		}
+		if !client.IsAwsCredentialsConfigured() {
+			return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
+		}
+	}
+
 	params := &client.BackupParameters{
 		DatabaseParameters: client.DatabaseParameters{
 			Server:       viper.GetString("server"),

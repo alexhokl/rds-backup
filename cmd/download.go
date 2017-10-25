@@ -78,9 +78,11 @@ func init() {
 }
 
 func runDownload(opts downloadOptions) error {
-	c := client.GetClient()
-	if c == nil {
-		return errors.New("Unable to find a sqlcmd client")
+	if !client.IsAwsCliInstalled() {
+		return errors.New("AWS CLI is required")
+	}
+	if !client.IsAwsCredentialsConfigured() {
+		return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
 	}
 
 	fmt.Println("Download started...")
@@ -111,9 +113,6 @@ func runDownload(opts downloadOptions) error {
 }
 
 func validateDownloadOptions(opts downloadOptions) error {
-	if opts.databaseName == "" {
-		return errors.New("Database must be specified")
-	}
 	if opts.bucketName == "" {
 		return errors.New("Bucket must be specified")
 	}
@@ -122,6 +121,9 @@ func validateDownloadOptions(opts downloadOptions) error {
 	}
 
 	if opts.isRestore {
+		if opts.databaseName == "" {
+			return errors.New("Database must be specified")
+		}
 		if opts.containerName == "" {
 			return errors.New("Name of container must be specified")
 		}
