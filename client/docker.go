@@ -59,6 +59,14 @@ const createTableDeclaration = `DECLARE @s TABLE (
 type DockerSqlClient struct{}
 
 func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
+	if !isDockerInstalled() {
+		return false
+	}
+	if !isDockerContentTrustDisabled() {
+		fmt.Println("Docker Content Trust is not disabled yet. Please run 'export DOCKER_CONTENT_TRUST=0'")
+		return false
+	}
+
 	args := []string{
 		"inspect",
 		"-f",
@@ -280,4 +288,13 @@ func getCommandArgs(params *DatabaseParameters, statement string) []string {
 		"-Q",
 		statement,
 	}
+}
+
+func isDockerInstalled() bool {
+	_, err := execute([]string{"help"})
+	return err == nil
+}
+
+func isDockerContentTrustDisabled() bool {
+	return os.Getenv("DOCKER_CONTENT_TRUST") != "1"
 }
