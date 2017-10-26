@@ -67,16 +67,11 @@ func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
 		return false
 	}
 
-	args := []string{
-		"inspect",
-		"-f",
-		"'{{.State.Running}}'",
-		"mssql",
-	}
-	output, err := execute(args)
-	if err != nil || strings.Contains(output, "false") {
+	serverContainerName := getSqlServerContainerName()
+	if serverContainerName == "" {
 		return false
 	}
+
 	return true
 }
 
@@ -297,4 +292,21 @@ func isDockerInstalled() bool {
 
 func isDockerContentTrustDisabled() bool {
 	return os.Getenv("DOCKER_CONTENT_TRUST") != "1"
+}
+
+func getSqlServerContainerName() string {
+	args := []string{
+		"ps",
+		"-f",
+		"ancestor=microsoft/mssql-server-linux",
+		"-f",
+		"status=running",
+		"--format",
+		"{{.Names}}",
+	}
+	output, err := execute(args)
+	if err != nil {
+		return ""
+	}
+	return strings.Split(output, "\n")[0]
 }
