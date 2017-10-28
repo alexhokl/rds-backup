@@ -56,9 +56,11 @@ const createTableDeclaration = `DECLARE @s TABLE (
 	task_info VARCHAR(MAX)
 )`
 
-type DockerSqlClient struct{}
+type DockerSqlClient struct {
+	clientContainerName string
+}
 
-func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
+func (c *DockerSqlClient) IsEnvironmentSatisfied() bool {
 	if !isDockerInstalled() {
 		return false
 	}
@@ -69,14 +71,28 @@ func (c DockerSqlClient) IsEnvironmentSatisfied() bool {
 
 	serverContainerName := getSqlServerContainerName()
 	if serverContainerName == "" {
-		return false
+		if isSqlCommandContainerExist() {
+			removeSqlCommandContainer()
+		}
+		containerName, errCreate := createSqlCommandContainer()
+		if errCreate != nil {
+			return false
+		}
+
+		// TODO: there must be a better way of doing this
+		c.clientContainerName = containerName
+
+		return true
 	}
+
+	// TODO: there must be a better way of doing this
+	c.clientContainerName = serverContainerName
 
 	return true
 }
 
 // GetStatus returns the status of the latest backup
-func (c DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c *DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -93,7 +109,7 @@ func (c DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (s
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
-	args := getCommandArgs(params, statement)
+	args := getCommandArgs(c.clientContainerName, params, statement)
 	output, err := execute(args)
 	if err != nil {
 		return "", err
@@ -102,7 +118,7 @@ func (c DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (s
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func (c DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c *DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -114,7 +130,7 @@ func (c DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (st
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
-	args := getCommandArgs(params, statement)
+	args := getCommandArgs(c.clientContainerName, params, statement)
 	output, err := execute(args)
 	if err != nil {
 		return "", err
@@ -123,7 +139,7 @@ func (c DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (st
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func (c DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c *DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -135,7 +151,7 @@ func (c DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, err
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
-	args := getCommandArgs(params, statement)
+	args := getCommandArgs(c.clientContainerName, params, statement)
 	output, err := execute(args)
 	if err != nil {
 		return "", err
@@ -144,7 +160,7 @@ func (c DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, err
 }
 
 // StartBackup creates a new backup
-func (c DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
+func (c *DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s
@@ -163,7 +179,7 @@ func (c DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
 		params.BucketName,
 		params.Filename)
 
-	args := getCommandArgs(&params.DatabaseParameters, statement)
+	args := getCommandArgs(c.clientContainerName, &params.DatabaseParameters, statement)
 	output, err := execute(args)
 	if err != nil {
 		return "", err
@@ -234,17 +250,17 @@ func Restore(filename string, containerName string, password string, databaseNam
 	return nil
 }
 
-func (c DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+func (c *DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
-	outputData, errData := execute(getCommandArgs(params, dataNameQuery))
+	outputData, errData := execute(getCommandArgs(c.clientContainerName, params, dataNameQuery))
 	if errData != nil {
 		return "", "", errData
 	}
 	dataName := getSQLOutput(outputData)
 
-	outputLog, errLog := execute(getCommandArgs(params, logNameQuery))
+	outputLog, errLog := execute(getCommandArgs(c.clientContainerName, params, logNameQuery))
 	if errLog != nil {
 		return "", "", errLog
 	}
@@ -266,11 +282,11 @@ func getSQLOutput(rawOutput string) string {
 	return strings.TrimSpace(lines[2])
 }
 
-func getCommandArgs(params *DatabaseParameters, statement string) []string {
+func getCommandArgs(clientContainerName string, params *DatabaseParameters, statement string) []string {
 	return []string{
 		"exec",
 		"-t",
-		"mssql",
+		clientContainerName,
 		"/opt/mssql-tools/bin/sqlcmd",
 		"-S",
 		params.Server,
@@ -309,4 +325,46 @@ func getSqlServerContainerName() string {
 		return ""
 	}
 	return strings.Split(output, "\n")[0]
+}
+
+func isSqlCommandContainerExist() bool {
+	args := []string{
+		"ps",
+		"-a",
+		"-f",
+		"name=mssql-sqlcmd",
+		"--format",
+		"{{.Names}}",
+	}
+	output, err := execute(args)
+	if err != nil {
+		return false
+	}
+	return strings.Split(output, "\n")[0] != ""
+}
+
+func removeSqlCommandContainer() error {
+	args := []string{
+		"rm",
+		"mssql-sqlcmd",
+	}
+	_, err := execute(args)
+	return err
+}
+
+func createSqlCommandContainer() (string, error) {
+	args := []string{
+		"run",
+		"--name",
+		"mssql-sqlcmd",
+		"-e",
+		"ACCEPT_EULA=Y",
+		"-d",
+		"microsoft/mssql-server-linux",
+	}
+	_, err := execute(args)
+	if err != nil {
+		return "", err
+	}
+	return "mssql-sqlcmd", nil
 }

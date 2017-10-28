@@ -11,7 +11,7 @@ import (
 
 type NativeClient struct{}
 
-func (c NativeClient) IsEnvironmentSatisfied() bool {
+func (c *NativeClient) IsEnvironmentSatisfied() bool {
 	args := []string{"-?"}
 	_, err := executeSqlCmd(args)
 	if err != nil {
@@ -21,7 +21,7 @@ func (c NativeClient) IsEnvironmentSatisfied() bool {
 }
 
 // GetStatus returns the status of the latest backup
-func (c NativeClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c *NativeClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -47,7 +47,7 @@ func (c NativeClient) GetStatus(params *DatabaseParameters, taskID string) (stri
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func (c NativeClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c *NativeClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -68,7 +68,7 @@ func (c NativeClient) GetCompletionPercentage(params *DatabaseParameters) (strin
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func (c NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c *NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -89,7 +89,7 @@ func (c NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error)
 }
 
 // StartBackup creates a new backup
-func (c NativeClient) StartBackup(params *BackupParameters) (string, error) {
+func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s
@@ -120,7 +120,7 @@ func (c NativeClient) StartBackup(params *BackupParameters) (string, error) {
 	return strings.TrimSpace(lines[3]), nil
 }
 
-func (c NativeClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
