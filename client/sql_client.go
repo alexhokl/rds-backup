@@ -10,11 +10,11 @@ type SqlClient interface {
 }
 
 func GetClient() SqlClient {
-	nativeCli := NativeClient{}
+	nativeCli := &NativeClient{}
 	if nativeCli.IsEnvironmentSatisfied() {
 		return nativeCli
 	}
-	dockerCli := DockerSqlClient{}
+	dockerCli := &DockerSqlClient{}
 	if dockerCli.IsEnvironmentSatisfied() {
 		return dockerCli
 	}
