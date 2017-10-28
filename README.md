@@ -1,3 +1,5 @@
+# AWS RDS MSSQL Backup Manager [![Build Status](https://travis-ci.org/alexhokl/rds-backup.svg?branch=master)](https://travis-ci.org/alexhokl/rds-backup)
+
 A command line tool to manage SQL backups on AWS RDS
 
 ##### Prerequisites
