@@ -274,6 +274,11 @@ func execute(args []string) (string, error) {
 		fmt.Println("Command executed:", "docker", args)
 	}
 	byteOutput, err := exec.Command("docker", args...).Output()
+	if err != nil {
+		if strings.Contains(err.Error(), "125") {
+			return string(byteOutput), errors.New("Please disable DOCKER_CONTENT_TRUST")
+		}
+	}
 	return string(byteOutput), err
 }
 
