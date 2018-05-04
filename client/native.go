@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -12,6 +13,9 @@ import (
 type NativeClient struct{}
 
 func (c *NativeClient) IsEnvironmentSatisfied() bool {
+	if runtime.GOOS == "linux" {
+		return false
+	}
 	args := []string{"-?"}
 	_, err := executeSqlCmd(args)
 	if err != nil {
