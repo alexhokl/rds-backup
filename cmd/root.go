@@ -15,7 +15,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -81,22 +80,4 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
-}
-
-func validateConfig() error {
-	server := viper.GetString("server")
-	username := viper.GetString("username")
-	password := viper.GetString("password")
-
-	if server == "" {
-		return errors.New("Server url is not configured")
-	}
-	if username == "" {
-		return errors.New("Username is not configured")
-	}
-	if password == "" {
-		return errors.New("Password is not configured")
-	}
-
-	return nil
 }

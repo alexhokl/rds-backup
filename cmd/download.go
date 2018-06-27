@@ -24,15 +24,18 @@ import (
 )
 
 type downloadOptions struct {
-	verbose       bool
-	databaseName  string
-	filename      string
-	bucketName    string
-	isRestore     bool
-	containerName string
-	password      string
-	dataName      string
-	logName       string
+	verbose        bool
+	databaseName   string
+	filename       string
+	bucketName     string
+	isRestore      bool
+	containerName  string
+	password       string
+	dataName       string
+	logName        string
+	server         string
+	serverUsername string
+	serverPassword string
 }
 
 func init() {
@@ -44,11 +47,7 @@ func init() {
 		Short: "Download a backup from AWS S3 with option of restore",
 		Long:  "Download a backup from AWS S3 with option of restore",
 		Run: func(cmd *cobra.Command, args []string) {
-			errConfig := validateConfig()
-			if errConfig != nil {
-				fmt.Println(errConfig.Error())
-				return
-			}
+			opts = bindDownloadConfiguration(opts)
 			errOpt := validateDownloadOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -73,6 +72,9 @@ func init() {
 	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
 	flags.StringVarP(&opts.dataName, "data", "m", "", "Logical name of data")
 	flags.StringVarP(&opts.logName, "log", "l", "", "Logical name of log")
+	flags.StringVarP(&opts.server, "server", "s", viper.GetString("server"), "Source SQL server")
+	flags.StringVarP(&opts.serverUsername, "server-username", "n", "", "Source SQL server login name")
+	flags.StringVarP(&opts.serverPassword, "server-password", "a", "", "Source SQL server login password")
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -112,7 +114,50 @@ func runDownload(opts downloadOptions) error {
 	return nil
 }
 
+func bindDownloadConfiguration(opts downloadOptions) downloadOptions {
+	if opts.server == "" {
+		opts.server = viper.GetString("server")
+	}
+	if opts.serverUsername == "" {
+		opts.serverUsername = viper.GetString("username")
+	}
+	if opts.serverPassword == "" {
+		opts.serverPassword = viper.GetString("password")
+	}
+	if opts.databaseName == "" {
+		opts.databaseName = viper.GetString("database")
+	}
+	if opts.containerName == "" {
+		opts.containerName = viper.GetString("container")
+	}
+	if opts.password == "" {
+		opts.password = viper.GetString("restorePassword")
+	}
+	if opts.dataName == "" {
+		opts.dataName = viper.GetString("mdf")
+	}
+	if opts.logName == "" {
+		opts.logName = viper.GetString("ldf")
+	}
+	if opts.bucketName == "" {
+		opts.bucketName = viper.GetString("bucket")
+	}
+	return opts
+}
+
 func validateDownloadOptions(opts downloadOptions) error {
+	if opts.server == "" {
+		return errors.New("Source SQL server must be specified")
+	}
+
+	if opts.serverUsername == "" {
+		return errors.New("Source SQL server login name must be specified")
+	}
+
+	if opts.serverPassword == "" {
+		return errors.New("Source SQL server login password must be specified")
+	}
+
 	if opts.bucketName == "" {
 		return errors.New("Bucket must be specified")
 	}

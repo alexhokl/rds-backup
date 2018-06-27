@@ -34,6 +34,9 @@ type createOptions struct {
 	isRestore           bool
 	containerName       string
 	password            string
+	server              string
+	serverUsername      string
+	serverPassword      string
 }
 
 func init() {
@@ -45,11 +48,7 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
-			errConfig := validateConfig()
-			if errConfig != nil {
-				fmt.Println(errConfig.Error())
-				return
-			}
+			opts = bindCreateConfiguration(opts)
 			errOpt := validateCreateOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -74,6 +73,9 @@ func init() {
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
 	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
+	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
+	flags.StringVarP(&opts.serverUsername, "server-username", "n", "", "Source SQL server login name")
+	flags.StringVarP(&opts.serverPassword, "server-password", "a", "", "Source SQL server login password")
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -163,7 +165,7 @@ func runCreate(opts createOptions) error {
 
 func isBackupCompleted(c client.SqlClient, params *client.BackupParameters, taskID string) error {
 	done := false
-	var err error = nil
+	var err error
 
 	for !done {
 		fmt.Printf(".")
@@ -198,7 +200,41 @@ func isBackupDone(c client.SqlClient, params *client.DatabaseParameters, taskID 
 	return status == "SUCCESS", nil
 }
 
+func bindCreateConfiguration(opts createOptions) createOptions {
+	if opts.server == "" {
+		opts.server = viper.GetString("server")
+	}
+	if opts.serverUsername == "" {
+		opts.serverUsername = viper.GetString("username")
+	}
+	if opts.serverPassword == "" {
+		opts.serverPassword = viper.GetString("password")
+	}
+	if opts.databaseName == "" {
+		opts.databaseName = viper.GetString("database")
+	}
+	if opts.containerName == "" {
+		opts.containerName = viper.GetString("container")
+	}
+	if opts.password == "" {
+		opts.password = viper.GetString("restorePassword")
+	}
+	return opts
+}
+
 func validateCreateOptions(opts createOptions) error {
+	if opts.server == "" {
+		return errors.New("Source SQL server must be specified")
+	}
+
+	if opts.serverUsername == "" {
+		return errors.New("Source SQL server login name must be specified")
+	}
+
+	if opts.serverPassword == "" {
+		return errors.New("Source SQL server login password must be specified")
+	}
+
 	if opts.databaseName == "" {
 		return errors.New("Database must be specified")
 	}

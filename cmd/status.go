@@ -24,8 +24,11 @@ import (
 )
 
 type statusOptions struct {
-	verbose      bool
-	databaseName string
+	verbose        bool
+	databaseName   string
+	server         string
+	serverUsername string
+	serverPassword string
 }
 
 func init() {
@@ -37,11 +40,7 @@ func init() {
 		Short: "Show the status of the latest backup",
 		Long:  "Show the status of the latest backup",
 		Run: func(cmd *cobra.Command, args []string) {
-			errConfig := validateConfig()
-			if errConfig != nil {
-				fmt.Println(errConfig.Error())
-				return
-			}
+			opts = bindStatusConfiguration(opts)
 			errOpt := validateStatusOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -59,6 +58,9 @@ func init() {
 	flags := statusCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
+	flags.StringVarP(&opts.serverUsername, "server-username", "n", "", "Source SQL server login name")
+	flags.StringVarP(&opts.serverPassword, "server-password", "a", "", "Source SQL server login password")
 
 	RootCmd.AddCommand(statusCmd)
 }
@@ -95,7 +97,35 @@ func runStatus(opts statusOptions) error {
 	return nil
 }
 
+func bindStatusConfiguration(opts statusOptions) statusOptions {
+	if opts.server == "" {
+		opts.server = viper.GetString("server")
+	}
+	if opts.serverUsername == "" {
+		opts.serverUsername = viper.GetString("username")
+	}
+	if opts.serverPassword == "" {
+		opts.serverPassword = viper.GetString("password")
+	}
+	if opts.databaseName == "" {
+		opts.databaseName = viper.GetString("database")
+	}
+	return opts
+}
+
 func validateStatusOptions(opts statusOptions) error {
+	if opts.server == "" {
+		return errors.New("Source SQL server must be specified")
+	}
+
+	if opts.serverUsername == "" {
+		return errors.New("Source SQL server login name must be specified")
+	}
+
+	if opts.serverPassword == "" {
+		return errors.New("Source SQL server login password must be specified")
+	}
+
 	if opts.databaseName == "" {
 		return errors.New("Database must be specified")
 	}
