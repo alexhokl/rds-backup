@@ -41,7 +41,6 @@ func init() {
 		Short: "Restores the specified backup in a docker container",
 		Long:  "Restores the specified backup in a docker container",
 		Run: func(cmd *cobra.Command, args []string) {
-			opts = bindRestoreConfiguration(opts)
 			errOpt := validateRestoreOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -59,23 +58,29 @@ func init() {
 	flags := restoreCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+	viper.BindPFlag("database", flags.Lookup("database"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
+	viper.BindPFlag("container", flags.Lookup("container"))
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
+	viper.BindPFlag("filename", flags.Lookup("filename"))
 	flags.StringVarP(&opts.password, "password", "p", "", "Create and download the backup")
-	flags.StringVarP(&opts.dataName, "data", "m", "", "Logical name of data")
-	flags.StringVarP(&opts.logName, "log", "l", "", "Logical name of log")
+	viper.BindPFlag("password", flags.Lookup("password"))
+	flags.StringVarP(&opts.dataName, "mdf", "m", "", "Logical name of data")
+	viper.BindPFlag("mdf", flags.Lookup("mdf"))
+	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
+	viper.BindPFlag("ldf", flags.Lookup("ldf"))
 
 	RootCmd.AddCommand(restoreCmd)
 }
 
 func runRestore(opts restoreOptions) error {
 	err := client.Restore(
-		opts.filename,
-		opts.containerName,
-		opts.password,
-		opts.databaseName,
-		opts.dataName,
-		opts.logName,
+		viper.GetString("filename"),
+		viper.GetString("container"),
+		viper.GetString("password"),
+		viper.GetString("database"),
+		viper.GetString("mdf"),
+		viper.GetString("ldf"),
 	)
 	if err != nil {
 		return err
@@ -83,42 +88,23 @@ func runRestore(opts restoreOptions) error {
 	return nil
 }
 
-func bindRestoreConfiguration(opts restoreOptions) restoreOptions {
-	if opts.databaseName == "" {
-		opts.databaseName = viper.GetString("database")
-	}
-	if opts.containerName == "" {
-		opts.containerName = viper.GetString("container")
-	}
-	if opts.password == "" {
-		opts.password = viper.GetString("restorePassword")
-	}
-	if opts.dataName == "" {
-		opts.dataName = viper.GetString("mdf")
-	}
-	if opts.logName == "" {
-		opts.logName = viper.GetString("ldf")
-	}
-	return opts
-}
-
 func validateRestoreOptions(opts restoreOptions) error {
-	if opts.filename == "" {
+	if viper.GetString("filename") == "" {
 		return errors.New("Filename must be specified")
 	}
-	if opts.containerName == "" {
+	if viper.GetString("container") == "" {
 		return errors.New("Container name must be specified")
 	}
-	if opts.password == "" {
+	if viper.GetString("password") == "" {
 		return errors.New("Password must be specified")
 	}
-	if opts.databaseName == "" {
+	if viper.GetString("database") == "" {
 		return errors.New("Database name must be specified")
 	}
-	if opts.dataName == "" {
+	if viper.GetString("mdf") == "" {
 		return errors.New("Logical name of data must be specified")
 	}
-	if opts.logName == "" {
+	if viper.GetString("ldf") == "" {
 		return errors.New("Logical name of log must be specified")
 	}
 	return nil

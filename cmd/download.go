@@ -24,18 +24,15 @@ import (
 )
 
 type downloadOptions struct {
-	verbose        bool
-	databaseName   string
-	filename       string
-	bucketName     string
-	isRestore      bool
-	containerName  string
-	password       string
-	dataName       string
-	logName        string
-	server         string
-	serverUsername string
-	serverPassword string
+	verbose       bool
+	databaseName  string
+	filename      string
+	bucketName    string
+	isRestore     bool
+	containerName string
+	password      string
+	dataName      string
+	logName       string
 }
 
 func init() {
@@ -47,7 +44,6 @@ func init() {
 		Short: "Download a backup from AWS S3 with option of restore",
 		Long:  "Download a backup from AWS S3 with option of restore",
 		Run: func(cmd *cobra.Command, args []string) {
-			opts = bindDownloadConfiguration(opts)
 			errOpt := validateDownloadOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -64,17 +60,21 @@ func init() {
 
 	flags := createCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
-	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
-	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
+	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+	viper.BindPFlag("database", flags.Lookup("database"))
+	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
+	viper.BindPFlag("bucket", flags.Lookup("bucket"))
+	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
+	viper.BindPFlag("filename", flags.Lookup("filename"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
+	viper.BindPFlag("container", flags.Lookup("container"))
 	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
-	flags.StringVarP(&opts.dataName, "data", "m", "", "Logical name of data")
-	flags.StringVarP(&opts.logName, "log", "l", "", "Logical name of log")
-	flags.StringVarP(&opts.server, "server", "s", viper.GetString("server"), "Source SQL server")
-	flags.StringVarP(&opts.serverUsername, "server-username", "n", "", "Source SQL server login name")
-	flags.StringVarP(&opts.serverPassword, "server-password", "a", "", "Source SQL server login password")
+	viper.BindPFlag("password", flags.Lookup("password"))
+	flags.StringVarP(&opts.dataName, "mdf", "m", "", "Logical name of data")
+	viper.BindPFlag("mdf", flags.Lookup("mdf"))
+	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
+	viper.BindPFlag("ldf", flags.Lookup("ldf"))
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -89,7 +89,7 @@ func runDownload(opts downloadOptions) error {
 
 	fmt.Println("Download started...")
 
-	errDownload := client.DownloadBackup(opts.bucketName, opts.filename)
+	errDownload := client.DownloadBackup(viper.GetString("bucket"), viper.GetString("filename"))
 	if errDownload != nil {
 		return errDownload
 	}
@@ -98,12 +98,12 @@ func runDownload(opts downloadOptions) error {
 	if opts.isRestore {
 		fmt.Println("Starting to restore...")
 		errRestore := client.Restore(
-			opts.filename,
-			opts.containerName,
-			opts.password,
-			opts.databaseName,
-			opts.dataName,
-			opts.logName,
+			viper.GetString("filename"),
+			viper.GetString("container"),
+			viper.GetString("password"),
+			viper.GetString("database"),
+			viper.GetString("mdf"),
+			viper.GetString("ldf"),
 		)
 		if errRestore != nil {
 			return errRestore
@@ -114,71 +114,28 @@ func runDownload(opts downloadOptions) error {
 	return nil
 }
 
-func bindDownloadConfiguration(opts downloadOptions) downloadOptions {
-	if opts.server == "" {
-		opts.server = viper.GetString("server")
-	}
-	if opts.serverUsername == "" {
-		opts.serverUsername = viper.GetString("username")
-	}
-	if opts.serverPassword == "" {
-		opts.serverPassword = viper.GetString("password")
-	}
-	if opts.databaseName == "" {
-		opts.databaseName = viper.GetString("database")
-	}
-	if opts.containerName == "" {
-		opts.containerName = viper.GetString("container")
-	}
-	if opts.password == "" {
-		opts.password = viper.GetString("restorePassword")
-	}
-	if opts.dataName == "" {
-		opts.dataName = viper.GetString("mdf")
-	}
-	if opts.logName == "" {
-		opts.logName = viper.GetString("ldf")
-	}
-	if opts.bucketName == "" {
-		opts.bucketName = viper.GetString("bucket")
-	}
-	return opts
-}
-
 func validateDownloadOptions(opts downloadOptions) error {
-	if opts.server == "" {
-		return errors.New("Source SQL server must be specified")
-	}
-
-	if opts.serverUsername == "" {
-		return errors.New("Source SQL server login name must be specified")
-	}
-
-	if opts.serverPassword == "" {
-		return errors.New("Source SQL server login password must be specified")
-	}
-
-	if opts.bucketName == "" {
+	if viper.GetString("bucket") == "" {
 		return errors.New("Bucket must be specified")
 	}
-	if opts.filename == "" {
+	if viper.GetString("filename") == "" {
 		return errors.New("Filename must be specified")
 	}
 
 	if opts.isRestore {
-		if opts.databaseName == "" {
+		if viper.GetString("database") == "" {
 			return errors.New("Database must be specified")
 		}
-		if opts.containerName == "" {
+		if viper.GetString("container") == "" {
 			return errors.New("Name of container must be specified")
 		}
-		if opts.password == "" {
+		if viper.GetString("password") == "" {
 			return errors.New("Password must be specified")
 		}
-		if opts.dataName == "" {
+		if viper.GetString("mdf") == "" {
 			return errors.New("Logical name of data must be specified")
 		}
-		if opts.logName == "" {
+		if viper.GetString("ldf") == "" {
 			return errors.New("Logical name of log must be specified")
 		}
 	}
