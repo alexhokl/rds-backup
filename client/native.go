@@ -3,7 +3,10 @@ package client
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -146,6 +149,60 @@ func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, stri
 	return dataName, logName, nil
 }
 
+// RestoreNative restores a backup onto a local instance of SQL server
+func RestoreNative(filename string, databaseName string, dataName string, logName string, renameDatabase string, customDataPath string) error {
+	_, errFile := os.Stat(filename)
+	if errFile != nil {
+		return errFile
+	}
+
+	currentDirectory, _ := os.Getwd()
+	pathToBak := filepath.Join(currentDirectory, filename)
+	pathToBackup := filepath.Join("C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\Backup\\", filename)
+
+	copyFile(pathToBak, pathToBackup)
+
+	mdfDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\DATA\\"
+	ldfDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\LOG\\"
+
+	if customDataPath != "" {
+		if _, errCustomPath := os.Stat(customDataPath); os.IsNotExist(errCustomPath) {
+			return errCustomPath
+		}
+		mdfDirectory = customDataPath
+		ldfDirectory = customDataPath
+	}
+
+	mdfPath := filepath.Join(mdfDirectory, fmt.Sprintf("%s.mdf", databaseName))
+	ldfPath := filepath.Join(ldfDirectory, fmt.Sprintf("%s.ldf", databaseName))
+
+	database := databaseName
+	if renameDatabase != "" {
+		database = renameDatabase
+	}
+
+	fmt.Println("Restoring...")
+
+	restoreArgs := []string{
+		"-Q",
+		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '%s', MOVE '%s' TO '%s'", database, pathToBackup, dataName, mdfPath, logName, ldfPath),
+	}
+
+	_, err := executeSQLCmd(restoreArgs)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Restore has been completed.")
+
+	errRemove := os.Remove(pathToBackup)
+	if errRemove != nil {
+		return errRemove
+	}
+	fmt.Println("Clean up done.")
+
+	return nil
+}
+
 func executeSQLCmd(args []string) (string, error) {
 	if viper.GetBool("verbose") {
 		fmt.Println("Command executed:", "sqlcmd", args)
@@ -167,4 +224,24 @@ func getSQLCommandArgs(params *DatabaseParameters, statement string) []string {
 		"-Q",
 		statement,
 	}
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Close()
 }

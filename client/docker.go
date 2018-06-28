@@ -249,7 +249,7 @@ func Restore(filename string, containerName string, password string, databaseNam
 	if err != nil {
 		return err
 	}
-	fmt.Println("Restore is completed.")
+	fmt.Println("Restore has been completed.")
 	return nil
 }
 
