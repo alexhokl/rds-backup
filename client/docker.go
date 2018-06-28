@@ -56,11 +56,13 @@ const createTableDeclaration = `DECLARE @s TABLE (
 	task_info VARCHAR(MAX)
 )`
 
-type DockerSqlClient struct {
+// DockerSQLClient a SQL client in a Docker container
+type DockerSQLClient struct {
 	clientContainerName string
 }
 
-func (c *DockerSqlClient) IsEnvironmentSatisfied() bool {
+// IsEnvironmentSatisfied returns if this client can be ran on this machine
+func (c *DockerSQLClient) IsEnvironmentSatisfied() bool {
 	if !isDockerInstalled() {
 		return false
 	}
@@ -69,12 +71,12 @@ func (c *DockerSqlClient) IsEnvironmentSatisfied() bool {
 		return false
 	}
 
-	serverContainerName := getSqlServerContainerName()
+	serverContainerName := getSQLServerContainerName()
 	if serverContainerName == "" {
-		if isSqlCommandContainerExist() {
-			removeSqlCommandContainer()
+		if isSQLCommandContainerExist() {
+			removeSQLCommandContainer()
 		}
-		containerName, errCreate := createSqlCommandContainer()
+		containerName, errCreate := createSQLCommandContainer()
 		if errCreate != nil {
 			return false
 		}
@@ -92,7 +94,7 @@ func (c *DockerSqlClient) IsEnvironmentSatisfied() bool {
 }
 
 // GetStatus returns the status of the latest backup
-func (c *DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c *DockerSQLClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -118,7 +120,7 @@ func (c *DockerSqlClient) GetStatus(params *DatabaseParameters, taskID string) (
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func (c *DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c *DockerSQLClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -139,7 +141,7 @@ func (c *DockerSqlClient) GetCompletionPercentage(params *DatabaseParameters) (s
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func (c *DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c *DockerSQLClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -160,7 +162,7 @@ func (c *DockerSqlClient) GetTaskMessage(params *DatabaseParameters) (string, er
 }
 
 // StartBackup creates a new backup
-func (c *DockerSqlClient) StartBackup(params *BackupParameters) (string, error) {
+func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s
@@ -191,6 +193,7 @@ func (c *DockerSqlClient) StartBackup(params *BackupParameters) (string, error) 
 	return strings.TrimSpace(lines[3]), nil
 }
 
+// Restore creates a Docker container and restores the specified backup onto it
 func Restore(filename string, containerName string, password string, databaseName string, dataName string, logName string) error {
 	_, errFile := os.Stat(filename)
 	if errFile != nil {
@@ -250,7 +253,8 @@ func Restore(filename string, containerName string, password string, databaseNam
 	return nil
 }
 
-func (c *DockerSqlClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+// GetLogicalNames retrieve logical names of MDF and LDF
+func (c *DockerSQLClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
@@ -315,7 +319,7 @@ func isDockerContentTrustDisabled() bool {
 	return os.Getenv("DOCKER_CONTENT_TRUST") != "1"
 }
 
-func getSqlServerContainerName() string {
+func getSQLServerContainerName() string {
 	args := []string{
 		"ps",
 		"-f",
@@ -332,7 +336,7 @@ func getSqlServerContainerName() string {
 	return strings.Split(output, "\n")[0]
 }
 
-func isSqlCommandContainerExist() bool {
+func isSQLCommandContainerExist() bool {
 	args := []string{
 		"ps",
 		"-a",
@@ -348,7 +352,7 @@ func isSqlCommandContainerExist() bool {
 	return strings.Split(output, "\n")[0] != ""
 }
 
-func removeSqlCommandContainer() error {
+func removeSQLCommandContainer() error {
 	args := []string{
 		"rm",
 		"mssql-sqlcmd",
@@ -357,7 +361,7 @@ func removeSqlCommandContainer() error {
 	return err
 }
 
-func createSqlCommandContainer() (string, error) {
+func createSQLCommandContainer() (string, error) {
 	args := []string{
 		"run",
 		"--name",

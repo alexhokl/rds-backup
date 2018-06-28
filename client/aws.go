@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// DownloadBackup downloads a SQL backup from a S3 bucket
 func DownloadBackup(bucketName string, filename string) error {
 	args := []string{
 		"s3",
@@ -20,11 +21,13 @@ func DownloadBackup(bucketName string, filename string) error {
 	return err
 }
 
+// IsAwsCliInstalled returns if AWS CLI has been installed
 func IsAwsCliInstalled() bool {
 	_, err := executeCommand([]string{"help"})
 	return err == nil
 }
 
+// IsAwsCredentialsConfigured returns if AWS CLI credentials has been configured
 func IsAwsCredentialsConfigured() bool {
 	_, err := executeCommand([]string{"s3", "ls"})
 	return err == nil

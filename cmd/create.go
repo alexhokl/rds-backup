@@ -170,7 +170,7 @@ func runCreate(opts createOptions) error {
 	return nil
 }
 
-func isBackupCompleted(c client.SqlClient, params *client.BackupParameters, taskID string) error {
+func isBackupCompleted(c client.SQLClient, params *client.BackupParameters, taskID string) error {
 	done := false
 	var err error
 
@@ -191,7 +191,7 @@ func isBackupCompleted(c client.SqlClient, params *client.BackupParameters, task
 	return nil
 }
 
-func isBackupDone(c client.SqlClient, params *client.DatabaseParameters, taskID string) (bool, error) {
+func isBackupDone(c client.SQLClient, params *client.DatabaseParameters, taskID string) (bool, error) {
 	status, err := c.GetStatus(params, taskID)
 	if err != nil {
 		return false, err

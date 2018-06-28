@@ -1,6 +1,7 @@
 package client
 
-type SqlClient interface {
+// SQLClient performs SQL operations
+type SQLClient interface {
 	IsEnvironmentSatisfied() bool
 	GetStatus(*DatabaseParameters, string) (string, error)
 	GetCompletionPercentage(*DatabaseParameters) (string, error)
@@ -9,12 +10,13 @@ type SqlClient interface {
 	GetLogicalNames(*DatabaseParameters) (string, string, error)
 }
 
-func GetClient() SqlClient {
+// GetClient returns a SQL client which can be run on this machine
+func GetClient() SQLClient {
 	nativeCli := &NativeClient{}
 	if nativeCli.IsEnvironmentSatisfied() {
 		return nativeCli
 	}
-	dockerCli := &DockerSqlClient{}
+	dockerCli := &DockerSQLClient{}
 	if dockerCli.IsEnvironmentSatisfied() {
 		return dockerCli
 	}

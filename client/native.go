@@ -10,14 +10,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+// NativeClient is a SQL client runs sqlcmd on a machine
 type NativeClient struct{}
 
+// IsEnvironmentSatisfied returns if this client can be run on this machine
 func (c *NativeClient) IsEnvironmentSatisfied() bool {
 	if runtime.GOOS == "linux" {
 		return false
 	}
 	args := []string{"-?"}
-	_, err := executeSqlCmd(args)
+	_, err := executeSQLCmd(args)
 	if err != nil {
 		return false
 	}
@@ -42,8 +44,8 @@ func (c *NativeClient) GetStatus(params *DatabaseParameters, taskID string) (str
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
-	args := getSqlCommandArgs(params, statement)
-	output, err := executeSqlCmd(args)
+	args := getSQLCommandArgs(params, statement)
+	output, err := executeSQLCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -63,8 +65,8 @@ func (c *NativeClient) GetCompletionPercentage(params *DatabaseParameters) (stri
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
-	args := getSqlCommandArgs(params, statement)
-	output, err := executeSqlCmd(args)
+	args := getSQLCommandArgs(params, statement)
+	output, err := executeSQLCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -84,8 +86,8 @@ func (c *NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error
 
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
-	args := getSqlCommandArgs(params, statement)
-	output, err := executeSqlCmd(args)
+	args := getSQLCommandArgs(params, statement)
+	output, err := executeSQLCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -112,8 +114,8 @@ func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
 		params.BucketName,
 		params.Filename)
 
-	args := getSqlCommandArgs(&params.DatabaseParameters, statement)
-	output, err := executeSqlCmd(args)
+	args := getSQLCommandArgs(&params.DatabaseParameters, statement)
+	output, err := executeSQLCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -124,17 +126,18 @@ func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
 	return strings.TrimSpace(lines[3]), nil
 }
 
+// GetLogicalNames returns the logical names of MDF and LDF
 func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
-	outputData, errData := executeSqlCmd(getSqlCommandArgs(params, dataNameQuery))
+	outputData, errData := executeSQLCmd(getSQLCommandArgs(params, dataNameQuery))
 	if errData != nil {
 		return "", "", errData
 	}
 	dataName := getSQLOutput(outputData)
 
-	outputLog, errLog := executeSqlCmd(getSqlCommandArgs(params, logNameQuery))
+	outputLog, errLog := executeSQLCmd(getSQLCommandArgs(params, logNameQuery))
 	if errLog != nil {
 		return "", "", errLog
 	}
@@ -143,7 +146,7 @@ func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, stri
 	return dataName, logName, nil
 }
 
-func executeSqlCmd(args []string) (string, error) {
+func executeSQLCmd(args []string) (string, error) {
 	if viper.GetBool("verbose") {
 		fmt.Println("Command executed:", "sqlcmd", args)
 	}
@@ -151,7 +154,7 @@ func executeSqlCmd(args []string) (string, error) {
 	return string(byteOutput), err
 }
 
-func getSqlCommandArgs(params *DatabaseParameters, statement string) []string {
+func getSQLCommandArgs(params *DatabaseParameters, statement string) []string {
 	return []string{
 		"-S",
 		params.Server,
