@@ -48,7 +48,6 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
-			opts = bindCreateConfiguration(opts)
 			errOpt := validateCreateOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
@@ -65,17 +64,25 @@ func init() {
 
 	flags := createCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
-	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
-	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
-	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
 	flags.BoolVarP(&opts.isWaitForCompletion, "wait", "w", false, "Wait for backup to complete")
+	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
+	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
+	viper.BindPFlag("database", flags.Lookup("database"))
+	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
+	viper.BindPFlag("bucket", flags.Lookup("bucket"))
+	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
+	viper.BindPFlag("filename", flags.Lookup("filename"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
-	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
+	viper.BindPFlag("container", flags.Lookup("container"))
+	flags.StringVarP(&opts.password, "restore-password", "a", "", "Password of the MSSQL server in the container to be created")
+	viper.BindPFlag("restorePassword", flags.Lookup("restore-password"))
 	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
-	flags.StringVarP(&opts.serverUsername, "server-username", "n", "", "Source SQL server login name")
-	flags.StringVarP(&opts.serverPassword, "server-password", "a", "", "Source SQL server login password")
+	viper.BindPFlag("server", flags.Lookup("server"))
+	flags.StringVarP(&opts.serverUsername, "username", "n", "", "Source SQL server login name")
+	viper.BindPFlag("username", flags.Lookup("username"))
+	flags.StringVarP(&opts.serverPassword, "password", "p", "", "Source SQL server login password")
+	viper.BindPFlag("password", flags.Lookup("password"))
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -95,10 +102,10 @@ func runCreate(opts createOptions) error {
 			Server:       viper.GetString("server"),
 			Username:     viper.GetString("username"),
 			Password:     viper.GetString("password"),
-			DatabaseName: opts.databaseName,
+			DatabaseName: viper.GetString("database"),
 		},
-		BucketName: opts.bucketName,
-		Filename:   opts.filename,
+		BucketName: viper.GetString("bucket"),
+		Filename:   viper.GetString("filename"),
 	}
 
 	c := client.GetClient()
@@ -147,10 +154,10 @@ func runCreate(opts createOptions) error {
 	if opts.isRestore {
 		fmt.Println("Starting to restore...")
 		errRestore := client.Restore(
-			opts.filename,
-			opts.containerName,
-			opts.password,
-			opts.databaseName,
+			viper.GetString("filename"),
+			viper.GetString("container"),
+			viper.GetString("restorePassword"),
+			viper.GetString("database"),
 			dataLogicalName,
 			logLogicalName,
 		)
@@ -200,56 +207,34 @@ func isBackupDone(c client.SqlClient, params *client.DatabaseParameters, taskID 
 	return status == "SUCCESS", nil
 }
 
-func bindCreateConfiguration(opts createOptions) createOptions {
-	if opts.server == "" {
-		opts.server = viper.GetString("server")
-	}
-	if opts.serverUsername == "" {
-		opts.serverUsername = viper.GetString("username")
-	}
-	if opts.serverPassword == "" {
-		opts.serverPassword = viper.GetString("password")
-	}
-	if opts.databaseName == "" {
-		opts.databaseName = viper.GetString("database")
-	}
-	if opts.containerName == "" {
-		opts.containerName = viper.GetString("container")
-	}
-	if opts.password == "" {
-		opts.password = viper.GetString("restorePassword")
-	}
-	return opts
-}
-
 func validateCreateOptions(opts createOptions) error {
-	if opts.server == "" {
+	if viper.GetString("server") == "" {
 		return errors.New("Source SQL server must be specified")
 	}
 
-	if opts.serverUsername == "" {
+	if viper.GetString("username") == "" {
 		return errors.New("Source SQL server login name must be specified")
 	}
 
-	if opts.serverPassword == "" {
+	if viper.GetString("password") == "" {
 		return errors.New("Source SQL server login password must be specified")
 	}
 
-	if opts.databaseName == "" {
+	if viper.GetString("database") == "" {
 		return errors.New("Database must be specified")
 	}
-	if opts.bucketName == "" {
+	if viper.GetString("bucket") == "" {
 		return errors.New("Bucket must be specified")
 	}
-	if opts.filename == "" {
+	if viper.GetString("filename") == "" {
 		return errors.New("Filename must be specified")
 	}
 
 	if opts.isRestore {
-		if opts.containerName == "" {
+		if viper.GetString("container") == "" {
 			return errors.New("Name of container must be specified")
 		}
-		if opts.password == "" {
+		if viper.GetString("restorePassword") == "" {
 			return errors.New("Password must be specified")
 		}
 	}

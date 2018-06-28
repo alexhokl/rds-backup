@@ -69,8 +69,8 @@ func init() {
 	viper.BindPFlag("filename", flags.Lookup("filename"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
 	viper.BindPFlag("container", flags.Lookup("container"))
-	flags.StringVarP(&opts.password, "password", "p", "", "Password of the MSSQL server in the container to be created")
-	viper.BindPFlag("password", flags.Lookup("password"))
+	flags.StringVarP(&opts.password, "restore-password", "p", "", "Password of the restored server")
+	viper.BindPFlag("restorePassword", flags.Lookup("restore-password"))
 	flags.StringVarP(&opts.dataName, "mdf", "m", "", "Logical name of data")
 	viper.BindPFlag("mdf", flags.Lookup("mdf"))
 	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
@@ -100,7 +100,7 @@ func runDownload(opts downloadOptions) error {
 		errRestore := client.Restore(
 			viper.GetString("filename"),
 			viper.GetString("container"),
-			viper.GetString("password"),
+			viper.GetString("restorePassword"),
 			viper.GetString("database"),
 			viper.GetString("mdf"),
 			viper.GetString("ldf"),
@@ -129,7 +129,7 @@ func validateDownloadOptions(opts downloadOptions) error {
 		if viper.GetString("container") == "" {
 			return errors.New("Name of container must be specified")
 		}
-		if viper.GetString("password") == "" {
+		if viper.GetString("restorePassword") == "" {
 			return errors.New("Password must be specified")
 		}
 		if viper.GetString("mdf") == "" {
