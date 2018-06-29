@@ -24,15 +24,18 @@ import (
 )
 
 type downloadOptions struct {
-	verbose       bool
-	databaseName  string
-	filename      string
-	bucketName    string
-	isRestore     bool
-	containerName string
-	password      string
-	dataName      string
-	logName       string
+	verbose              bool
+	databaseName         string
+	filename             string
+	bucketName           string
+	isRestore            bool
+	containerName        string
+	password             string
+	dataName             string
+	logName              string
+	isNative             bool
+	restoreDatabaseName  string
+	restoreDataDirectory string
 }
 
 func init() {
@@ -61,6 +64,7 @@ func init() {
 	flags := createCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
+	flags.BoolVarP(&opts.isNative, "native", "n", false, "Restore to local native SQL server")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
 	viper.BindPFlag("database", flags.Lookup("database"))
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
@@ -75,6 +79,10 @@ func init() {
 	viper.BindPFlag("mdf", flags.Lookup("mdf"))
 	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
 	viper.BindPFlag("ldf", flags.Lookup("ldf"))
+	flags.StringVar(&opts.restoreDatabaseName, "restore-database", "", "Name of restored database")
+	viper.BindPFlag("restoreDatabase", flags.Lookup("restore-database"))
+	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
+	viper.BindPFlag("restoreDataDirectory", flags.Lookup("restore-data-directory"))
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -97,6 +105,20 @@ func runDownload(opts downloadOptions) error {
 
 	if opts.isRestore {
 		fmt.Println("Starting to restore...")
+		if opts.isNative {
+			errNative := client.RestoreNative(
+				viper.GetString("filename"),
+				viper.GetString("database"),
+				viper.GetString("mdf"),
+				viper.GetString("ldf"),
+				viper.GetString("restoreDatabase"),
+				viper.GetString("restoreDataDirectory"),
+			)
+			if errNative != nil {
+				return errNative
+			}
+			return nil
+		}
 		errRestore := client.Restore(
 			viper.GetString("filename"),
 			viper.GetString("container"),
@@ -126,17 +148,25 @@ func validateDownloadOptions(opts downloadOptions) error {
 		if viper.GetString("database") == "" {
 			return errors.New("Database must be specified")
 		}
-		if viper.GetString("container") == "" {
-			return errors.New("Name of container must be specified")
-		}
-		if viper.GetString("restorePassword") == "" {
-			return errors.New("Password must be specified")
-		}
 		if viper.GetString("mdf") == "" {
 			return errors.New("Logical name of data must be specified")
 		}
 		if viper.GetString("ldf") == "" {
 			return errors.New("Logical name of log must be specified")
+		}
+		if !opts.isNative {
+			if viper.GetString("container") == "" {
+				return errors.New("Container name must be specified")
+			}
+			if viper.GetString("restorePassword") == "" {
+				return errors.New("Password must be specified")
+			}
+			if viper.GetString("restoreDatabase") != "" {
+				return errors.New("restore-database cannot be used in Docker container restore")
+			}
+			if viper.GetString("restoreDataDirectory") != "" {
+				return errors.New("restore-data-directory cannot be used in Docker container restore")
+			}
 		}
 	}
 
