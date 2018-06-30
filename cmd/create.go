@@ -149,7 +149,7 @@ func runCreate(opts createOptions) error {
 		if errBackup != nil {
 			return errBackup
 		}
-		fmt.Println("Backup completed.")
+		fmt.Printf("Backup completed (on AWS S3 at s3://%s/%s).\n", params.BucketName, params.Filename)
 	}
 
 	if opts.isDownload || opts.isRestore {
@@ -157,13 +157,9 @@ func runCreate(opts createOptions) error {
 		if errDownload != nil {
 			return errDownload
 		}
-		fmt.Println("Download of the backup is completed")
 	}
 
-	fmt.Println("")
-
 	if opts.isRestore {
-		fmt.Println("Starting to restore...")
 		if opts.isNative {
 			errNative := client.RestoreNative(
 				viper.GetString("filename"),
@@ -190,7 +186,6 @@ func runCreate(opts createOptions) error {
 		if errRestore != nil {
 			return errRestore
 		}
-		fmt.Println("Restore completed.")
 	}
 
 	return nil

@@ -2,7 +2,9 @@ package client
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -16,7 +18,14 @@ func DownloadBackup(bucketName string, filename string) error {
 		filename,
 	}
 
+	fmt.Printf("Download of backup from AWS S3 (s3://%s/%s) started...\n", bucketName, filename)
 	_, err := executeCommand(args)
+
+	if err == nil {
+		currentDirectory, _ := os.Getwd()
+		pathToBak := filepath.Join(currentDirectory, filename)
+		fmt.Printf("Download of the backup has been completed (%s)\n", pathToBak)
+	}
 
 	return err
 }

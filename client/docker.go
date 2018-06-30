@@ -201,7 +201,8 @@ func Restore(filename string, containerName string, password string, databaseNam
 	}
 
 	currentDirectory, _ := os.Getwd()
-	directoryToMount := filepath.Dir(filepath.Join(currentDirectory, filename))
+	pathToBak := filepath.Join(currentDirectory, filename)
+	directoryToMount := filepath.Dir(pathToBak)
 
 	createArgs := []string{
 		"run",
@@ -218,6 +219,8 @@ func Restore(filename string, containerName string, password string, databaseNam
 		"-d",
 		"microsoft/mssql-server-linux",
 	}
+
+	fmt.Printf("Starting to restore from file %s onto a SQL Server in Docker container...\n", pathToBak)
 
 	_, errCreate := execute(createArgs)
 	if errCreate != nil {
@@ -249,7 +252,7 @@ func Restore(filename string, containerName string, password string, databaseNam
 	if err != nil {
 		return err
 	}
-	fmt.Println("Restore has been completed.")
+	fmt.Printf("Restore has been completed (as database %s).\n", databaseName)
 	return nil
 }
 

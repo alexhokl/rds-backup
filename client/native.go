@@ -156,14 +156,23 @@ func RestoreNative(filename string, databaseName string, dataName string, logNam
 		return errFile
 	}
 
+	serverDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\"
+	serverBackupDirectory := filepath.Join(serverDirectory, "Backup\\")
+	serverMdfDirectory := filepath.Join(serverDirectory, "DATA\\")
+	serverLdfDirectory := filepath.Join(serverDirectory, "LOG\\")
+
 	currentDirectory, _ := os.Getwd()
 	pathToBak := filepath.Join(currentDirectory, filename)
-	pathToBackup := filepath.Join("C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\Backup\\", filename)
+	pathToBackup := filepath.Join(serverBackupDirectory, filename)
+
+	fmt.Println("Starting to restore onto local SQL Server...")
 
 	copyFile(pathToBak, pathToBackup)
 
-	mdfDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\DATA\\"
-	ldfDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\LOG\\"
+	fmt.Printf("Copied from %s to %s to prepare restoration.\n", pathToBak, pathToBackup)
+
+	mdfDirectory := serverMdfDirectory
+	ldfDirectory := serverLdfDirectory
 
 	if customDataPath != "" {
 		if _, errCustomPath := os.Stat(customDataPath); os.IsNotExist(errCustomPath) {
@@ -192,13 +201,13 @@ func RestoreNative(filename string, databaseName string, dataName string, logNam
 	if err != nil {
 		return err
 	}
-	fmt.Println("Restore has been completed.")
+	fmt.Printf("Restore has been completed (as database '%s').\n", database)
 
 	errRemove := os.Remove(pathToBackup)
 	if errRemove != nil {
 		return errRemove
 	}
-	fmt.Println("Clean up done.")
+	fmt.Printf("Removed file %s. Clean up done.\n", pathToBackup)
 
 	return nil
 }

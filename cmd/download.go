@@ -98,16 +98,12 @@ func runDownload(opts downloadOptions) error {
 		return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
 	}
 
-	fmt.Println("Download started...")
-
 	errDownload := client.DownloadBackup(viper.GetString("bucket"), viper.GetString("filename"))
 	if errDownload != nil {
 		return errDownload
 	}
-	fmt.Println("Download of the backup is completed")
 
 	if opts.isRestore {
-		fmt.Println("Starting to restore...")
 		if opts.isNative {
 			errNative := client.RestoreNative(
 				viper.GetString("filename"),
@@ -134,7 +130,6 @@ func runDownload(opts downloadOptions) error {
 		if errRestore != nil {
 			return errRestore
 		}
-		fmt.Println("Restore completed.")
 	}
 
 	return nil
