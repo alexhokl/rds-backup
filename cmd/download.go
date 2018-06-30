@@ -23,22 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type downloadOptions struct {
-	verbose              bool
-	databaseName         string
-	filename             string
-	bucketName           string
-	isRestore            bool
-	containerName        string
-	password             string
-	dataName             string
-	logName              string
-	isNative             bool
-	restoreDatabaseName  string
-	restoreDataDirectory string
-	port                 int
-}
-
 func init() {
 
 	opts := downloadOptions{}

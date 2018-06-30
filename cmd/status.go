@@ -23,14 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type statusOptions struct {
-	verbose        bool
-	databaseName   string
-	server         string
-	serverUsername string
-	serverPassword string
-}
-
 func init() {
 
 	opts := statusOptions{}

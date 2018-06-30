@@ -23,20 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type restoreOptions struct {
-	verbose              bool
-	databaseName         string
-	filename             string
-	containerName        string
-	password             string
-	dataName             string
-	logName              string
-	isNative             bool
-	restoreDatabaseName  string
-	restoreDataDirectory string
-	port                 int
-}
-
 func init() {
 	opts := restoreOptions{}
 

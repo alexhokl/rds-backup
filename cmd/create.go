@@ -24,25 +24,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type createOptions struct {
-	verbose              bool
-	databaseName         string
-	filename             string
-	bucketName           string
-	isDownload           bool
-	isWaitForCompletion  bool
-	isRestore            bool
-	containerName        string
-	password             string
-	server               string
-	serverUsername       string
-	serverPassword       string
-	isNative             bool
-	restoreDatabaseName  string
-	restoreDataDirectory string
-	port                 int
-}
-
 func init() {
 
 	opts := createOptions{}
