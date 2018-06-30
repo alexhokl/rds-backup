@@ -48,11 +48,7 @@ func init() {
 	}
 
 	flags := statusCmd.Flags()
-	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
-	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
-	flags.StringVarP(&opts.serverUsername, "username", "n", "", "Source SQL server login name")
-	flags.StringVarP(&opts.serverPassword, "password", "p", "", "Source SQL server login password")
+	bindStatusOptions(flags, opts)
 
 	statusCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		viper.BindPFlag(f.Name, f)
