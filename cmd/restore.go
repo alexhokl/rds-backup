@@ -34,6 +34,7 @@ type restoreOptions struct {
 	isNative             bool
 	restoreDatabaseName  string
 	restoreDataDirectory string
+	port                 int
 }
 
 func init() {
@@ -77,6 +78,8 @@ func init() {
 	viper.BindPFlag("restoreDatabase", flags.Lookup("restore-database"))
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
 	viper.BindPFlag("restoreDataDirectory", flags.Lookup("restore-data-directory"))
+	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
+	viper.BindPFlag("port", flags.Lookup("port"))
 
 	RootCmd.AddCommand(restoreCmd)
 }
@@ -103,6 +106,7 @@ func runRestore(opts restoreOptions) error {
 		viper.GetString("database"),
 		viper.GetString("mdf"),
 		viper.GetString("ldf"),
+		viper.GetInt("port"),
 	)
 	if err != nil {
 		return err
@@ -114,7 +118,11 @@ func validateRestoreOptions(opts restoreOptions) error {
 	if viper.GetString("filename") == "" {
 		return errors.New("Filename must be specified")
 	}
-	if !opts.isNative {
+	if opts.isNative {
+		if viper.GetString("port") != "" {
+			return errors.New("Port cannot be used in restoring to local native SQL server")
+		}
+	} else {
 		if viper.GetString("container") == "" {
 			return errors.New("Container name must be specified")
 		}

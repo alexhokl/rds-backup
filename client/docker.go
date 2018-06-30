@@ -194,7 +194,7 @@ func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) 
 }
 
 // Restore creates a Docker container and restores the specified backup onto it
-func Restore(filename string, containerName string, password string, databaseName string, dataName string, logName string) error {
+func Restore(filename string, containerName string, password string, databaseName string, dataName string, logName string, port int) error {
 	_, errFile := os.Stat(filename)
 	if errFile != nil {
 		return errFile
@@ -208,7 +208,7 @@ func Restore(filename string, containerName string, password string, databaseNam
 		"--name",
 		containerName,
 		"-p",
-		"1433:1433",
+		fmt.Sprintf("%d:1433", port),
 		"-v",
 		fmt.Sprintf("%s/:/var/backups/", directoryToMount),
 		"-e",
