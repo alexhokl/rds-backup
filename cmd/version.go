@@ -7,6 +7,7 @@ import (
 )
 
 var version = "development"
+var tag = ""
 
 func init() {
 	var versionCmd = &cobra.Command{
@@ -14,7 +15,7 @@ func init() {
 		Short: "Show version",
 		Long:  "Show version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("rds-backup version (%s)\n", version)
+			fmt.Printf("rds-backup version (%s, %s)\n", tag, version)
 		},
 	}
 	RootCmd.AddCommand(versionCmd)
