@@ -43,7 +43,7 @@ func init() {
 
 	opts := downloadOptions{}
 
-	var createCmd = &cobra.Command{
+	var downloadCmd = &cobra.Command{
 		Use:   "download",
 		Short: "Download a backup from AWS S3 with option of restore",
 		Long:  "Download a backup from AWS S3 with option of restore",
@@ -62,32 +62,32 @@ func init() {
 		},
 	}
 
-	flags := createCmd.Flags()
+	flags := downloadCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
 	flags.BoolVarP(&opts.isNative, "native", "n", false, "Restore to local native SQL server")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	viper.BindPFlag("database", flags.Lookup("database"))
+	viper.BindPFlag("database", downloadCmd.Flags().Lookup("database"))
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
-	viper.BindPFlag("bucket", flags.Lookup("bucket"))
+	viper.BindPFlag("bucket", downloadCmd.Flags().Lookup("bucket"))
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
-	viper.BindPFlag("filename", flags.Lookup("filename"))
+	viper.BindPFlag("filename", downloadCmd.Flags().Lookup("filename"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
-	viper.BindPFlag("container", flags.Lookup("container"))
+	viper.BindPFlag("container", downloadCmd.Flags().Lookup("container"))
 	flags.StringVarP(&opts.password, "restore-password", "p", "", "Password of the restored server")
-	viper.BindPFlag("restorePassword", flags.Lookup("restore-password"))
+	viper.BindPFlag("restorePassword", downloadCmd.Flags().Lookup("restore-password"))
 	flags.StringVarP(&opts.dataName, "mdf", "m", "", "Logical name of data")
-	viper.BindPFlag("mdf", flags.Lookup("mdf"))
+	viper.BindPFlag("mdf", downloadCmd.Flags().Lookup("mdf"))
 	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
-	viper.BindPFlag("ldf", flags.Lookup("ldf"))
+	viper.BindPFlag("ldf", downloadCmd.Flags().Lookup("ldf"))
 	flags.StringVar(&opts.restoreDatabaseName, "restore-database", "", "Name of restored database")
-	viper.BindPFlag("restoreDatabase", flags.Lookup("restore-database"))
+	viper.BindPFlag("restoreDatabase", downloadCmd.Flags().Lookup("restore-database"))
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
-	viper.BindPFlag("restoreDataDirectory", flags.Lookup("restore-data-directory"))
+	viper.BindPFlag("restoreDataDirectory", downloadCmd.Flags().Lookup("restore-data-directory"))
 	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
-	viper.BindPFlag("port", flags.Lookup("port"))
+	viper.BindPFlag("port", downloadCmd.Flags().Lookup("port"))
 
-	RootCmd.AddCommand(createCmd)
+	RootCmd.AddCommand(downloadCmd)
 }
 
 func runDownload(opts downloadOptions) error {
