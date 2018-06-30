@@ -20,6 +20,7 @@ import (
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -49,13 +50,13 @@ func init() {
 	flags := statusCmd.Flags()
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	viper.BindPFlag("database", statusCmd.Flags().Lookup("database"))
 	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
-	viper.BindPFlag("server", statusCmd.Flags().Lookup("server"))
 	flags.StringVarP(&opts.serverUsername, "username", "n", "", "Source SQL server login name")
-	viper.BindPFlag("username", statusCmd.Flags().Lookup("username"))
 	flags.StringVarP(&opts.serverPassword, "password", "p", "", "Source SQL server login password")
-	viper.BindPFlag("password", statusCmd.Flags().Lookup("password"))
+
+	statusCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		viper.BindPFlag(f.Name, f)
+	})
 
 	RootCmd.AddCommand(statusCmd)
 }

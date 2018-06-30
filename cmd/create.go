@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/spf13/pflag"
+
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,27 +56,20 @@ func init() {
 	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	viper.BindPFlag("database", createCmd.Flags().Lookup("database"))
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
-	viper.BindPFlag("bucket", createCmd.Flags().Lookup("bucket"))
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
-	viper.BindPFlag("filename", createCmd.Flags().Lookup("filename"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
-	viper.BindPFlag("container", createCmd.Flags().Lookup("container"))
 	flags.StringVarP(&opts.password, "restore-password", "a", "", "Password of the MSSQL server in the container to be created")
-	viper.BindPFlag("restorePassword", createCmd.Flags().Lookup("restore-password"))
 	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
-	viper.BindPFlag("server", createCmd.Flags().Lookup("server"))
 	flags.StringVarP(&opts.serverUsername, "username", "u", "", "Source SQL server login name")
-	viper.BindPFlag("username", createCmd.Flags().Lookup("username"))
 	flags.StringVarP(&opts.serverPassword, "password", "p", "", "Source SQL server login password")
-	viper.BindPFlag("password", createCmd.Flags().Lookup("password"))
 	flags.StringVar(&opts.restoreDatabaseName, "restore-database", "", "Name of restored database")
-	viper.BindPFlag("restoreDatabase", createCmd.Flags().Lookup("restore-database"))
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
-	viper.BindPFlag("restoreDataDirectory", createCmd.Flags().Lookup("restore-data-directory"))
 	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
-	viper.BindPFlag("port", createCmd.Flags().Lookup("port"))
+
+	createCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		viper.BindPFlag(f.Name, f)
+	})
 
 	RootCmd.AddCommand(createCmd)
 }

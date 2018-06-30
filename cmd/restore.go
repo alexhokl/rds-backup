@@ -20,6 +20,7 @@ import (
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -49,23 +50,18 @@ func init() {
 	flags.BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose mode")
 	flags.BoolVarP(&opts.isNative, "native", "n", false, "Restore to local native SQL server")
 	flags.StringVarP(&opts.databaseName, "database", "d", "", "Name of database")
-	viper.BindPFlag("database", restoreCmd.Flags().Lookup("database"))
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
-	viper.BindPFlag("container", restoreCmd.Flags().Lookup("container"))
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
-	viper.BindPFlag("filename", restoreCmd.Flags().Lookup("filename"))
 	flags.StringVarP(&opts.password, "restore-password", "p", "", "Password of the restored server")
-	viper.BindPFlag("restorePassword", restoreCmd.Flags().Lookup("restore-password"))
 	flags.StringVarP(&opts.dataName, "mdf", "m", "", "Logical name of data")
-	viper.BindPFlag("mdf", restoreCmd.Flags().Lookup("mdf"))
 	flags.StringVarP(&opts.logName, "ldf", "l", "", "Logical name of log")
-	viper.BindPFlag("ldf", restoreCmd.Flags().Lookup("ldf"))
 	flags.StringVar(&opts.restoreDatabaseName, "restore-database", "", "Name of restored database")
-	viper.BindPFlag("restoreDatabase", restoreCmd.Flags().Lookup("restore-database"))
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
-	viper.BindPFlag("restoreDataDirectory", restoreCmd.Flags().Lookup("restore-data-directory"))
 	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
-	viper.BindPFlag("port", restoreCmd.Flags().Lookup("port"))
+
+	restoreCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		viper.BindPFlag(f.Name, f)
+	})
 
 	RootCmd.AddCommand(restoreCmd)
 }
