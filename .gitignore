@@ -3,6 +3,8 @@
 *.dll
 *.so
 *.dylib
+*.linux
+*.darwin
 
 # Test binary, build with `go test -c`
 *.test
