@@ -50,7 +50,7 @@ func init() {
 	}
 
 	flags := createCmd.Flags()
-	bindCreateOptions(flags, opts)
+	bindCreateOptions(flags, &opts)
 
 	createCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		viper.BindPFlag(f.Name, f)

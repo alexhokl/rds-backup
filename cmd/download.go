@@ -48,7 +48,7 @@ func init() {
 	}
 
 	flags := downloadCmd.Flags()
-	bindDownloadOptions(flags, opts)
+	bindDownloadOptions(flags, &opts)
 
 	downloadCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		viper.BindPFlag(f.Name, f)

@@ -47,7 +47,7 @@ func init() {
 	}
 
 	flags := restoreCmd.Flags()
-	bindRestoreOptions(flags, opts)
+	bindRestoreOptions(flags, &opts)
 
 	restoreCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		viper.BindPFlag(f.Name, f)

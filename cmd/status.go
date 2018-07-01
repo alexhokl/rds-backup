@@ -48,7 +48,7 @@ func init() {
 	}
 
 	flags := statusCmd.Flags()
-	bindStatusOptions(flags, opts)
+	bindStatusOptions(flags, &opts)
 
 	statusCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		viper.BindPFlag(f.Name, f)
