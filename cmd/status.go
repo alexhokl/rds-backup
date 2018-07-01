@@ -17,6 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
@@ -89,17 +90,23 @@ func runStatus() error {
 }
 
 func validateStatusOptions() error {
+	messages := strings.Builder{}
+
 	if viper.GetString("server") == "" {
-		return errors.New("--server AWS RDS SQL server must be specified")
+		messages.WriteString("--server AWS RDS SQL server must be specified\n")
 	}
 	if viper.GetString("username") == "" {
-		return errors.New("--username AWS RDS SQL server login name must be specified")
+		messages.WriteString("--username AWS RDS SQL server login name must be specified\n")
 	}
 	if viper.GetString("password") == "" {
-		return errors.New("--password AWS RDS SQL server login password must be specified")
+		messages.WriteString("--password AWS RDS SQL server login password must be specified\n")
 	}
 	if viper.GetString("database") == "" {
-		return errors.New("--database Name of database must be specified")
+		messages.WriteString("--database Name of database must be specified\n")
+	}
+
+	if messages.String() != "" {
+		return errors.New(messages.String())
 	}
 
 	return nil

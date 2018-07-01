@@ -17,6 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
@@ -102,41 +103,47 @@ func runDownload() error {
 }
 
 func validateDownloadOptions() error {
+	messages := strings.Builder{}
+
 	if viper.GetString("bucket") == "" {
-		return errors.New("--bucket AWS S3 Bucket must be specified")
+		messages.WriteString("--bucket AWS S3 Bucket must be specified\n")
 	}
 	if viper.GetString("filename") == "" {
-		return errors.New("--filename Filename must be specified")
+		messages.WriteString("--filename Filename must be specified\n")
 	}
 
 	if viper.GetBool("restore") {
 		if viper.GetString("database") == "" {
-			return errors.New("--database Name of database must be specified")
+			messages.WriteString("--database Name of database must be specified\n")
 		}
 		if viper.GetString("mdf") == "" {
-			return errors.New("--mdf Logical name of data must be specified")
+			messages.WriteString("--mdf Logical name of data must be specified\n")
 		}
 		if viper.GetString("ldf") == "" {
-			return errors.New("--ldf Logical name of log must be specified")
+			messages.WriteString("--ldf Logical name of log must be specified\n")
 		}
 		if viper.GetBool("native") {
 			if viper.GetInt("port") != client.DefaultServerPort {
-				return errors.New("--port Port cannot be used in restoring to local native SQL server")
+				messages.WriteString("--port Port cannot be used in restoring to local native SQL server\n")
 			}
 		} else {
 			if viper.GetString("container") == "" {
-				return errors.New("--container Container name must be specified")
+				messages.WriteString("--container Container name must be specified\n")
 			}
 			if viper.GetString("restore-password") == "" {
-				return errors.New("restore-password Password of the restored SQL server must be specified")
+				messages.WriteString("restore-password Password of the restored SQL server must be specified\n")
 			}
 			if viper.GetString("restore-database") != "" {
-				return errors.New("--restore-database cannot be used in Docker container restore")
+				messages.WriteString("--restore-database cannot be used in Docker container restore\n")
 			}
 			if viper.GetString("restore-data-directory") != "" {
-				return errors.New("--restore-data-directory cannot be used in Docker container restore")
+				messages.WriteString("--restore-data-directory cannot be used in Docker container restore\n")
 			}
 		}
+	}
+
+	if messages.String() != "" {
+		return errors.New(messages.String())
 	}
 
 	return nil
