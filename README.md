@@ -9,7 +9,7 @@ A command line tool to manage SQL backups on AWS RDS
 
 ##### Download
 
-- Feel free to download the latest version from [release page]https://github.com/alexhokl/rds-backup/releases), or
+- Feel free to download the latest version from [release page](https://github.com/alexhokl/rds-backup/releases), or
 - use `go get -u github.com/alexhokl/rds-backup` if you have Go installed
 
 ##### Examples
@@ -34,7 +34,7 @@ rds-backup create -r -n --bucket your-s3-bucket-name --database your-database-na
 
 ##### Tricks
 
-You can avoid specifying some of the parameters every time by using a configuration file or environment variables or combination of both.
+You can avoid specifying some of the parameters every time by using a configuration file or environment variables or a combination of both.
 
 ###### Configuration file
 
