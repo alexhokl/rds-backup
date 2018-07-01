@@ -38,13 +38,13 @@ func init() {
 			if viper.GetBool("verbose") {
 				dumpParameters(cmd)
 			}
-			errOpt := validateCreateOptions(opts)
+			errOpt := validateCreateOptions()
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runCreate(opts)
+			err := runCreate()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -57,8 +57,8 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 }
 
-func runCreate(opts createOptions) error {
-	if opts.isDownload || opts.isRestore {
+func runCreate() error {
+	if viper.GetBool("download") || viper.GetBool("restore") {
 		if !client.IsAwsCliInstalled() {
 			return errors.New("AWS CLI is required")
 		}
@@ -85,7 +85,7 @@ func runCreate(opts createOptions) error {
 
 	dataLogicalName := ""
 	logLogicalName := ""
-	if opts.isRestore {
+	if viper.GetBool("restore") {
 		dataName, logName, errLogicalNames := c.GetLogicalNames(&params.DatabaseParameters)
 		if errLogicalNames != nil {
 			return errLogicalNames
@@ -103,7 +103,7 @@ func runCreate(opts createOptions) error {
 	}
 	fmt.Printf("Backup task [%s] started...", taskID)
 
-	if opts.isDownload || opts.isWaitForCompletion || opts.isRestore {
+	if viper.GetBool("download") || viper.GetBool("wait") || viper.GetBool("restore") {
 		errBackup := isBackupCompleted(c, params, taskID)
 		if errBackup != nil {
 			return errBackup
@@ -111,15 +111,15 @@ func runCreate(opts createOptions) error {
 		fmt.Printf("Backup completed (on AWS S3 at s3://%s/%s).\n", params.BucketName, params.Filename)
 	}
 
-	if opts.isDownload || opts.isRestore {
+	if viper.GetBool("download") || viper.GetBool("restore") {
 		errDownload := client.DownloadBackup(params.BucketName, params.Filename)
 		if errDownload != nil {
 			return errDownload
 		}
 	}
 
-	if opts.isRestore {
-		if opts.isNative {
+	if viper.GetBool("restore") {
+		if viper.GetBool("native") {
 			errNative := client.RestoreNative(
 				viper.GetString("filename"),
 				viper.GetString("database"),
@@ -187,46 +187,43 @@ func isBackupDone(c client.SQLClient, params *client.DatabaseParameters, taskID 
 	return status == "SUCCESS", nil
 }
 
-func validateCreateOptions(opts createOptions) error {
+func validateCreateOptions() error {
 	if viper.GetString("server") == "" {
-		return errors.New("Source SQL server must be specified")
+		return errors.New("--server AWS RDS SQL server must be specified")
 	}
-
 	if viper.GetString("username") == "" {
-		return errors.New("Source SQL server login name must be specified")
+		return errors.New("--username AWS RDS SQL server login name must be specified")
 	}
-
 	if viper.GetString("password") == "" {
-		return errors.New("Source SQL server login password must be specified")
+		return errors.New("--password AWS RDS SQL server login password must be specified")
 	}
-
 	if viper.GetString("database") == "" {
-		return errors.New("Database must be specified")
+		return errors.New("--database Name of database must be specified")
 	}
 	if viper.GetString("bucket") == "" {
-		return errors.New("Bucket must be specified")
+		return errors.New("--bucket AWS S3 Bucket must be specified")
 	}
 	if viper.GetString("filename") == "" {
-		return errors.New("Filename must be specified")
+		return errors.New("--filename Filename must be specified")
 	}
 
-	if opts.isRestore {
-		if opts.isNative {
-			if viper.GetString("port") != "" {
-				return errors.New("Port cannot be used in restoring to local native SQL server")
+	if viper.GetBool("restore") {
+		if viper.GetBool("native") {
+			if viper.GetInt("port") != client.DefaultServerPort {
+				return errors.New("--port Port cannot be used in restoring to local native SQL server")
 			}
 		} else {
 			if viper.GetString("container") == "" {
-				return errors.New("Container name must be specified")
+				return errors.New("--container Container name must be specified")
 			}
 			if viper.GetString("restore-password") == "" {
-				return errors.New("Password must be specified")
+				return errors.New("restore-password Password of the restored SQL server must be specified")
 			}
 			if viper.GetString("restore-database") != "" {
-				return errors.New("restore-database cannot be used in Docker container restore")
+				return errors.New("--restore-database cannot be used in Docker container restore")
 			}
 			if viper.GetString("restore-data-directory") != "" {
-				return errors.New("restore-data-directory cannot be used in Docker container restore")
+				return errors.New("--restore-data-directory cannot be used in Docker container restore")
 			}
 		}
 	}

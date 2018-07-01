@@ -37,13 +37,13 @@ func init() {
 			if viper.GetBool("verbose") {
 				dumpParameters(cmd)
 			}
-			errOpt := validateDownloadOptions(opts)
+			errOpt := validateDownloadOptions()
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runDownload(opts)
+			err := runDownload()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -56,7 +56,7 @@ func init() {
 	RootCmd.AddCommand(downloadCmd)
 }
 
-func runDownload(opts downloadOptions) error {
+func runDownload() error {
 	if !client.IsAwsCliInstalled() {
 		return errors.New("AWS CLI is required")
 	}
@@ -69,8 +69,8 @@ func runDownload(opts downloadOptions) error {
 		return errDownload
 	}
 
-	if opts.isRestore {
-		if opts.isNative {
+	if viper.GetBool("restore") {
+		if viper.GetBool("native") {
 			errNative := client.RestoreNative(
 				viper.GetString("filename"),
 				viper.GetString("database"),
@@ -101,40 +101,40 @@ func runDownload(opts downloadOptions) error {
 	return nil
 }
 
-func validateDownloadOptions(opts downloadOptions) error {
+func validateDownloadOptions() error {
 	if viper.GetString("bucket") == "" {
-		return errors.New("Bucket must be specified")
+		return errors.New("--bucket AWS S3 Bucket must be specified")
 	}
 	if viper.GetString("filename") == "" {
-		return errors.New("Filename must be specified")
+		return errors.New("--filename Filename must be specified")
 	}
 
-	if opts.isRestore {
+	if viper.GetBool("restore") {
 		if viper.GetString("database") == "" {
-			return errors.New("Database must be specified")
+			return errors.New("--database Name of database must be specified")
 		}
 		if viper.GetString("mdf") == "" {
-			return errors.New("Logical name of data must be specified")
+			return errors.New("--mdf Logical name of data must be specified")
 		}
 		if viper.GetString("ldf") == "" {
-			return errors.New("Logical name of log must be specified")
+			return errors.New("--ldf Logical name of log must be specified")
 		}
-		if opts.isNative {
-			if viper.GetString("port") != "" {
-				return errors.New("Port cannot be used in restoring to local native SQL server")
+		if viper.GetBool("native") {
+			if viper.GetInt("port") != client.DefaultServerPort {
+				return errors.New("--port Port cannot be used in restoring to local native SQL server")
 			}
 		} else {
 			if viper.GetString("container") == "" {
-				return errors.New("Container name must be specified")
+				return errors.New("--container Container name must be specified")
 			}
 			if viper.GetString("restore-password") == "" {
-				return errors.New("Password must be specified")
+				return errors.New("restore-password Password of the restored SQL server must be specified")
 			}
 			if viper.GetString("restore-database") != "" {
-				return errors.New("restore-database cannot be used in Docker container restore")
+				return errors.New("--restore-database cannot be used in Docker container restore")
 			}
 			if viper.GetString("restore-data-directory") != "" {
-				return errors.New("restore-data-directory cannot be used in Docker container restore")
+				return errors.New("--restore-data-directory cannot be used in Docker container restore")
 			}
 		}
 	}

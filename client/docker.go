@@ -27,6 +27,9 @@ type BackupParameters struct {
 	Filename   string
 }
 
+// DefaultServerPort stores the default port of MSSQL server
+const DefaultServerPort = 1433
+
 const statusTableDeclaration = `DECLARE @s TABLE (
 	task_id INT,
 	task_type VARCHAR(20),
@@ -209,7 +212,7 @@ func Restore(filename string, containerName string, password string, databaseNam
 		"--name",
 		containerName,
 		"-p",
-		fmt.Sprintf("%d:1433", port),
+		fmt.Sprintf("%d:%d", port, DefaultServerPort),
 		"-v",
 		fmt.Sprintf("%s/:/var/backups/", directoryToMount),
 		"-e",

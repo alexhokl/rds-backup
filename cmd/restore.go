@@ -42,7 +42,7 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runRestore(opts)
+			err := runRestore()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -55,8 +55,8 @@ func init() {
 	RootCmd.AddCommand(restoreCmd)
 }
 
-func runRestore(opts restoreOptions) error {
-	if opts.isNative {
+func runRestore() error {
+	if viper.GetBool("native") {
 		errNative := client.RestoreNative(
 			viper.GetString("filename"),
 			viper.GetString("database"),
@@ -87,34 +87,34 @@ func runRestore(opts restoreOptions) error {
 
 func validateRestoreOptions() error {
 	if viper.GetString("filename") == "" {
-		return errors.New("Filename must be specified")
+		return errors.New("--filename Filename must be specified")
 	}
 	if viper.GetBool("native") {
-		if viper.GetString("port") != "" {
-			return errors.New("Port cannot be used in restoring to local native SQL server")
+		if viper.GetInt("port") != client.DefaultServerPort {
+			return errors.New("--port Port cannot be used in restoring to local native SQL server")
 		}
 	} else {
 		if viper.GetString("container") == "" {
-			return errors.New("Container name must be specified")
+			return errors.New("--container Container name must be specified")
 		}
 		if viper.GetString("restore-password") == "" {
-			return errors.New("Password must be specified")
+			return errors.New("restore-password Password of the restored SQL server must be specified")
 		}
 		if viper.GetString("restore-database") != "" {
-			return errors.New("restore-database cannot be used in Docker container restore")
+			return errors.New("--restore-database cannot be used in Docker container restore")
 		}
 		if viper.GetString("restore-data-directory") != "" {
-			return errors.New("restore-data-directory cannot be used in Docker container restore")
+			return errors.New("--restore-data-directory cannot be used in Docker container restore")
 		}
 	}
 	if viper.GetString("database") == "" {
-		return errors.New("Database name must be specified")
+		return errors.New("--database Name of database must be specified")
 	}
 	if viper.GetString("mdf") == "" {
-		return errors.New("Logical name of data must be specified")
+		return errors.New("--mdf Logical name of data must be specified")
 	}
 	if viper.GetString("ldf") == "" {
-		return errors.New("Logical name of log must be specified")
+		return errors.New("--ldf Logical name of log must be specified")
 	}
 	return nil
 }

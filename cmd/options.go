@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -92,7 +93,7 @@ func bindNativeRestoreOptions(flags *pflag.FlagSet, opts *nativeRestoreOptions) 
 func bindDockerRestoreOptions(flags *pflag.FlagSet, opts *dockerRestoreOptions) {
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
 	flags.StringVar(&opts.password, "restore-password", "", "Password of the MSSQL server in the container to be created")
-	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
+	flags.IntVar(&opts.port, "port", client.DefaultServerPort, "port of restored server container")
 }
 
 func bindBasicBackupOptions(flags *pflag.FlagSet, opts *basicBackupOptions) {

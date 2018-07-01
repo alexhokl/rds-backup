@@ -37,13 +37,13 @@ func init() {
 			if viper.GetBool("verbose") {
 				dumpParameters(cmd)
 			}
-			errOpt := validateStatusOptions(opts)
+			errOpt := validateStatusOptions()
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runStatus(opts)
+			err := runStatus()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -56,7 +56,7 @@ func init() {
 	RootCmd.AddCommand(statusCmd)
 }
 
-func runStatus(opts statusOptions) error {
+func runStatus() error {
 	params := &client.DatabaseParameters{
 		Server:       viper.GetString("server"),
 		Username:     viper.GetString("username"),
@@ -88,21 +88,18 @@ func runStatus(opts statusOptions) error {
 	return nil
 }
 
-func validateStatusOptions(opts statusOptions) error {
+func validateStatusOptions() error {
 	if viper.GetString("server") == "" {
-		return errors.New("Source SQL server must be specified")
+		return errors.New("--server AWS RDS SQL server must be specified")
 	}
-
 	if viper.GetString("username") == "" {
-		return errors.New("Source SQL server login name must be specified")
+		return errors.New("--username AWS RDS SQL server login name must be specified")
 	}
-
 	if viper.GetString("password") == "" {
-		return errors.New("Source SQL server login password must be specified")
+		return errors.New("--password AWS RDS SQL server login password must be specified")
 	}
-
 	if viper.GetString("database") == "" {
-		return errors.New("Database must be specified")
+		return errors.New("--database Name of database must be specified")
 	}
 
 	return nil
