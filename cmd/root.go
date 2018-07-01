@@ -29,7 +29,10 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "rds-backup",
 	Short: "Manages backup operations of MSSQL servers on AWS RDS",
-	Long:  "Manages backup operations of MSSQL servers on AWS RDS",
+	Long: `Manages backup operations of MSSQL servers on AWS RDS
+	
+			For documentation or bug report, please visit 
+			https://github.com/alexhokl/rds-backup/`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
