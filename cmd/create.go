@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/pflag"
-
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,14 +33,10 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Flags().VisitAll(func(f *pflag.Flag) {
-				viper.BindPFlag(f.Name, f)
-			})
+			bindConfiguration(cmd)
 			viper.Set("verbose", opts.verbose)
 			if viper.GetBool("verbose") {
-				cmd.Flags().VisitAll(func(f *pflag.Flag) {
-					fmt.Printf("%s: %s\n", f.Name, viper.GetString(f.Name))
-				})
+				dumpParameters(cmd)
 			}
 			errOpt := validateCreateOptions(opts)
 			if errOpt != nil {

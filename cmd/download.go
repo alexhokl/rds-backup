@@ -20,7 +20,6 @@ import (
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -33,14 +32,10 @@ func init() {
 		Short: "Download a backup from AWS S3 with option of restore",
 		Long:  "Download a backup from AWS S3 with option of restore",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Flags().VisitAll(func(f *pflag.Flag) {
-				viper.BindPFlag(f.Name, f)
-			})
+			bindConfiguration(cmd)
 			viper.Set("verbose", opts.verbose)
 			if viper.GetBool("verbose") {
-				cmd.Flags().VisitAll(func(f *pflag.Flag) {
-					fmt.Printf("%s: %s\n", f.Name, viper.GetString(f.Name))
-				})
+				dumpParameters(cmd)
 			}
 			errOpt := validateDownloadOptions(opts)
 			if errOpt != nil {

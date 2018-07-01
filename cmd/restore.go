@@ -20,7 +20,6 @@ import (
 
 	"github.com/alexhokl/rds-backup/client"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -32,16 +31,12 @@ func init() {
 		Short: "Restores the specified backup in a docker container",
 		Long:  "Restores the specified backup in a docker container",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Flags().VisitAll(func(f *pflag.Flag) {
-				viper.BindPFlag(f.Name, f)
-			})
+			bindConfiguration(cmd)
 			viper.Set("verbose", opts.verbose)
 			if viper.GetBool("verbose") {
-				cmd.Flags().VisitAll(func(f *pflag.Flag) {
-					fmt.Printf("%s: %s\n", f.Name, viper.GetString(f.Name))
-				})
+				dumpParameters(cmd)
 			}
-			errOpt := validateRestoreOptions(opts)
+			errOpt := validateRestoreOptions()
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
@@ -90,11 +85,11 @@ func runRestore(opts restoreOptions) error {
 	return nil
 }
 
-func validateRestoreOptions(opts restoreOptions) error {
+func validateRestoreOptions() error {
 	if viper.GetString("filename") == "" {
 		return errors.New("Filename must be specified")
 	}
-	if opts.isNative {
+	if viper.GetBool("native") {
 		if viper.GetString("port") != "" {
 			return errors.New("Port cannot be used in restoring to local native SQL server")
 		}
