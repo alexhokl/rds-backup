@@ -35,13 +35,21 @@ func init() {
 		Short: "Creates a new backup",
 		Long:  "Creates a new backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Flags().VisitAll(func(f *pflag.Flag) {
+				viper.BindPFlag(f.Name, f)
+			})
+			viper.Set("verbose", opts.verbose)
+			if viper.GetBool("verbose") {
+				cmd.Flags().VisitAll(func(f *pflag.Flag) {
+					fmt.Printf("%s: %s\n", f.Name, viper.GetString(f.Name))
+				})
+			}
 			errOpt := validateCreateOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			viper.Set("verbose", opts.verbose)
 			err := runCreate(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -51,10 +59,6 @@ func init() {
 
 	flags := createCmd.Flags()
 	bindCreateOptions(flags, &opts)
-
-	createCmd.Flags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(f.Name, f)
-	})
 
 	RootCmd.AddCommand(createCmd)
 }
@@ -127,8 +131,8 @@ func runCreate(opts createOptions) error {
 				viper.GetString("database"),
 				viper.GetString("mdf"),
 				viper.GetString("ldf"),
-				viper.GetString("restoreDatabase"),
-				viper.GetString("restoreDataDirectory"),
+				viper.GetString("restore-database"),
+				viper.GetString("restore-data-directory"),
 			)
 			if errNative != nil {
 				return errNative
@@ -138,7 +142,7 @@ func runCreate(opts createOptions) error {
 		errRestore := client.Restore(
 			viper.GetString("filename"),
 			viper.GetString("container"),
-			viper.GetString("restorePassword"),
+			viper.GetString("restore-password"),
 			viper.GetString("database"),
 			dataLogicalName,
 			logLogicalName,
@@ -221,13 +225,13 @@ func validateCreateOptions(opts createOptions) error {
 			if viper.GetString("container") == "" {
 				return errors.New("Container name must be specified")
 			}
-			if viper.GetString("restorePassword") == "" {
+			if viper.GetString("restore-password") == "" {
 				return errors.New("Password must be specified")
 			}
-			if viper.GetString("restoreDatabase") != "" {
+			if viper.GetString("restore-database") != "" {
 				return errors.New("restore-database cannot be used in Docker container restore")
 			}
-			if viper.GetString("restoreDataDirectory") != "" {
+			if viper.GetString("restore-data-directory") != "" {
 				return errors.New("restore-data-directory cannot be used in Docker container restore")
 			}
 		}

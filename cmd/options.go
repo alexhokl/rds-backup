@@ -78,7 +78,7 @@ func bindRestoreOptions(flags *pflag.FlagSet, opts *restoreOptions) {
 	flags.StringVarP(&opts.filename, "filename", "f", "", "File name of the backup")
 	flags.StringVarP(&opts.containerName, "container", "c", "", "Name of container to be created")
 	flags.StringVar(&opts.password, "restore-password", "", "Password of the MSSQL server in the container to be created")
-	flags.StringVar(&opts.restoreDatabaseName, "restore-database", "", "Name of restored database")
+	flags.StringVar(&opts.restoreDatabaseName, "restoreDatabase", "", "Name of restored database")
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
 	flags.IntVar(&opts.port, "port", 1433, "port of restored server container")
 }

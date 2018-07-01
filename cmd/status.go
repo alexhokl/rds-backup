@@ -33,13 +33,21 @@ func init() {
 		Short: "Show the status of the latest backup",
 		Long:  "Show the status of the latest backup",
 		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Flags().VisitAll(func(f *pflag.Flag) {
+				viper.BindPFlag(f.Name, f)
+			})
+			viper.Set("verbose", opts.verbose)
+			if viper.GetBool("verbose") {
+				cmd.Flags().VisitAll(func(f *pflag.Flag) {
+					fmt.Printf("%s: %s\n", f.Name, viper.GetString(f.Name))
+				})
+			}
 			errOpt := validateStatusOptions(opts)
 			if errOpt != nil {
 				fmt.Println(errOpt.Error())
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			viper.Set("verbose", opts.verbose)
 			err := runStatus(opts)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -49,10 +57,6 @@ func init() {
 
 	flags := statusCmd.Flags()
 	bindStatusOptions(flags, &opts)
-
-	statusCmd.Flags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(f.Name, f)
-	})
 
 	RootCmd.AddCommand(statusCmd)
 }
