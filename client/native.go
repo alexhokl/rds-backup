@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const DefaultServerInstallationPath = "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\"
+
 // NativeClient is a SQL client runs sqlcmd on a machine
 type NativeClient struct{}
 
@@ -156,7 +158,7 @@ func RestoreNative(filename string, databaseName string, dataName string, logNam
 		return errFile
 	}
 
-	serverDirectory := "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\"
+	serverDirectory := DefaultServerInstallationPath
 	serverBackupDirectory := filepath.Join(serverDirectory, "Backup\\")
 	serverMdfDirectory := filepath.Join(serverDirectory, "DATA\\")
 	serverLdfDirectory := filepath.Join(serverDirectory, "LOG\\")

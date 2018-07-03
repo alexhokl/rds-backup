@@ -15,7 +15,8 @@ type basicOptions struct {
 }
 
 type nativeRestoreOptions struct {
-	restoreDataDirectory string
+	restoreDataDirectory               string
+	restoreServerInstallationDirectory string
 }
 
 type dockerRestoreOptions struct {
@@ -88,6 +89,7 @@ func bindBasicOptions(flags *pflag.FlagSet, opts *basicOptions) {
 
 func bindNativeRestoreOptions(flags *pflag.FlagSet, opts *nativeRestoreOptions) {
 	flags.StringVar(&opts.restoreDataDirectory, "restore-data-directory", "", "Path to the directory where MDF and LDF files to be located")
+	flags.StringVar(&opts.restoreServerInstallationDirectory, "restore-server-directory", client.DefaultServerInstallationPath, "Path to the directory the native SQL server")
 }
 
 func bindDockerRestoreOptions(flags *pflag.FlagSet, opts *dockerRestoreOptions) {
