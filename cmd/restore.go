@@ -65,6 +65,7 @@ func runRestore() error {
 			viper.GetString("ldf"),
 			viper.GetString("restore-database"),
 			viper.GetString("restore-data-directory"),
+			viper.GetString("restore-server-directory"),
 		)
 		if errNative != nil {
 			return errNative
