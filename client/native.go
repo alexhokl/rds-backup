@@ -13,6 +13,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+// NativeRestoreParameters contains restore information
+type NativeRestoreParameters struct {
+	BaseRestoreParameters
+	CustomDataPath string
+	ServerPath     string
+}
+
 // DefaultServerInstallationPath path to the native SQL server installation
 const DefaultServerInstallationPath = "C:\\Program Files\\Microsoft SQL Server\\MSSQL13.MSSQLSERVER\\MSSQL\\"
 
@@ -153,20 +160,19 @@ func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, stri
 }
 
 // RestoreNative restores a backup onto a local instance of SQL server
-func RestoreNative(filename string, databaseName string, dataName string, logName string, renameDatabase string, customDataPath string, serverPath string) error {
-	_, errFile := os.Stat(filename)
+func RestoreNative(params *NativeRestoreParameters) error {
+	pathToBak := getPathToBak(&params.BaseRestoreParameters)
+	_, errFile := os.Stat(pathToBak)
 	if errFile != nil {
 		return errFile
 	}
 
-	serverDirectory := serverPath
+	serverDirectory := params.ServerPath
 	serverBackupDirectory := filepath.Join(serverDirectory, "Backup\\")
 	serverMdfDirectory := filepath.Join(serverDirectory, "DATA\\")
 	serverLdfDirectory := filepath.Join(serverDirectory, "LOG\\")
 
-	currentDirectory, _ := os.Getwd()
-	pathToBak := filepath.Join(currentDirectory, filename)
-	pathToBackup := filepath.Join(serverBackupDirectory, filename)
+	pathToBackup := filepath.Join(serverBackupDirectory, params.Filename)
 
 	fmt.Println("Starting to restore onto local SQL Server...")
 
@@ -177,34 +183,29 @@ func RestoreNative(filename string, databaseName string, dataName string, logNam
 	mdfDirectory := serverMdfDirectory
 	ldfDirectory := serverLdfDirectory
 
-	if customDataPath != "" {
-		if _, errCustomPath := os.Stat(customDataPath); os.IsNotExist(errCustomPath) {
+	if params.CustomDataPath != "" {
+		if _, errCustomPath := os.Stat(params.CustomDataPath); os.IsNotExist(errCustomPath) {
 			return errCustomPath
 		}
-		mdfDirectory = customDataPath
-		ldfDirectory = customDataPath
+		mdfDirectory = params.CustomDataPath
+		ldfDirectory = params.CustomDataPath
 	}
 
-	mdfPath := filepath.Join(mdfDirectory, fmt.Sprintf("%s.mdf", databaseName))
-	ldfPath := filepath.Join(ldfDirectory, fmt.Sprintf("%s.ldf", databaseName))
-
-	database := databaseName
-	if renameDatabase != "" {
-		database = renameDatabase
-	}
+	mdfPath := filepath.Join(mdfDirectory, fmt.Sprintf("%s.mdf", params.DatabaseName))
+	ldfPath := filepath.Join(ldfDirectory, fmt.Sprintf("%s.ldf", params.DatabaseName))
 
 	fmt.Println("Restoring...")
 
 	restoreArgs := []string{
 		"-Q",
-		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '%s', MOVE '%s' TO '%s'", database, pathToBackup, dataName, mdfPath, logName, ldfPath),
+		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '%s', MOVE '%s' TO '%s'", params.DatabaseName, pathToBackup, params.DataName, mdfPath, params.LogName, ldfPath),
 	}
 
 	_, err := executeSQLCmd(restoreArgs)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Restore has been completed (as database '%s').\n", database)
+	fmt.Printf("Restore has been completed (as database '%s').\n", params.DatabaseName)
 
 	errRemove := os.Remove(pathToBackup)
 	if errRemove != nil {

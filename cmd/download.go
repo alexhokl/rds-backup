@@ -17,6 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/alexhokl/rds-backup/client"
@@ -65,36 +66,39 @@ func runDownload() error {
 		return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
 	}
 
-	errDownload := client.DownloadBackup(viper.GetString("bucket"), viper.GetString("filename"))
+	errDownload := client.DownloadBackup(viper.GetString("bucket"), viper.GetString("filename"), viper.GetString("download-directory"))
 	if errDownload != nil {
 		return errDownload
 	}
 
+	basicRestoreParameters := client.BaseRestoreParameters{
+		Filename:          viper.GetString("filename"),
+		DatabaseName:      viper.GetString("database"),
+		DataName:          viper.GetString("mdf"),
+		LogName:           viper.GetString("ldf"),
+		DownloadDirectory: viper.GetString("download-directory"),
+	}
+
 	if viper.GetBool("restore") {
 		if viper.GetBool("native") {
-			errNative := client.RestoreNative(
-				viper.GetString("filename"),
-				viper.GetString("database"),
-				viper.GetString("mdf"),
-				viper.GetString("ldf"),
-				viper.GetString("restore-database"),
-				viper.GetString("restore-data-directory"),
-				viper.GetString("restore-server-directory"),
-			)
+			nativeParameters := &client.NativeRestoreParameters{
+				BaseRestoreParameters: basicRestoreParameters,
+				CustomDataPath:        viper.GetString("restore-data-directory"),
+				ServerPath:            viper.GetString("restore-server-directory"),
+			}
+			errNative := client.RestoreNative(nativeParameters)
 			if errNative != nil {
 				return errNative
 			}
 			return nil
 		}
-		errRestore := client.Restore(
-			viper.GetString("filename"),
-			viper.GetString("container"),
-			viper.GetString("restore-password"),
-			viper.GetString("database"),
-			viper.GetString("mdf"),
-			viper.GetString("ldf"),
-			viper.GetInt("port"),
-		)
+		restoreParameters := &client.RestoreParameters{
+			BaseRestoreParameters: basicRestoreParameters,
+			ContainerName:         viper.GetString("container"),
+			Password:              viper.GetString("restore-password"),
+			Port:                  viper.GetInt("port"),
+		}
+		errRestore := client.Restore(restoreParameters)
 		if errRestore != nil {
 			return errRestore
 		}
@@ -113,6 +117,13 @@ func validateDownloadOptions() error {
 		messages.WriteString("--filename Filename must be specified\n")
 	}
 
+	downloadDirectory := viper.GetString("download-directory")
+	if downloadDirectory != "" {
+		if _, errDownloadDirectory := os.Stat(downloadDirectory); os.IsNotExist(errDownloadDirectory) {
+			messages.WriteString(fmt.Sprintf("the specified download-directory (%s) does not exist\n", downloadDirectory))
+		}
+	}
+
 	if viper.GetBool("restore") {
 		if viper.GetString("database") == "" {
 			messages.WriteString("--database Name of database must be specified\n")
@@ -126,6 +137,12 @@ func validateDownloadOptions() error {
 		if viper.GetBool("native") {
 			if viper.GetInt("port") != client.DefaultServerPort {
 				messages.WriteString("--port Port cannot be used in restoring to local native SQL server\n")
+			}
+			restoreServerDirectory := viper.GetString("restore-server-directory")
+			if restoreServerDirectory != "" {
+				if _, errServerDirectory := os.Stat(restoreServerDirectory); os.IsNotExist(errServerDirectory) {
+					messages.WriteString("the specified restore-server-directory does not exist\n")
+				}
 			}
 		} else {
 			if viper.GetString("container") == "" {

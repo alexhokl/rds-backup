@@ -27,6 +27,23 @@ type BackupParameters struct {
 	Filename   string
 }
 
+// BaseRestoreParameters contains basic restore information
+type BaseRestoreParameters struct {
+	Filename          string
+	DatabaseName      string
+	DataName          string
+	LogName           string
+	DownloadDirectory string
+}
+
+// RestoreParameters contains restore information
+type RestoreParameters struct {
+	BaseRestoreParameters
+	ContainerName string
+	Password      string
+	Port          int
+}
+
 // DefaultServerPort stores the default port of MSSQL server
 const DefaultServerPort = 1433
 
@@ -197,26 +214,24 @@ func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) 
 }
 
 // Restore creates a Docker container and restores the specified backup onto it
-func Restore(filename string, containerName string, password string, databaseName string, dataName string, logName string, port int) error {
-	_, errFile := os.Stat(filename)
+func Restore(params *RestoreParameters) error {
+	pathToBak := getPathToBak(&params.BaseRestoreParameters)
+	_, errFile := os.Stat(pathToBak)
 	if errFile != nil {
 		return errFile
 	}
-
-	currentDirectory, _ := os.Getwd()
-	pathToBak := filepath.Join(currentDirectory, filename)
 	directoryToMount := filepath.Dir(pathToBak)
 
 	createArgs := []string{
 		"run",
 		"--name",
-		containerName,
+		params.ContainerName,
 		"-p",
-		fmt.Sprintf("%d:%d", port, DefaultServerPort),
+		fmt.Sprintf("%d:%d", params.Port, DefaultServerPort),
 		"-v",
 		fmt.Sprintf("%s/:/var/backups/", directoryToMount),
 		"-e",
-		fmt.Sprintf("SA_PASSWORD=%s", password),
+		fmt.Sprintf("SA_PASSWORD=%s", params.Password),
 		"-e",
 		"ACCEPT_EULA=Y",
 		"-d",
@@ -230,7 +245,7 @@ func Restore(filename string, containerName string, password string, databaseNam
 		return errCreate
 	}
 
-	fmt.Printf("MSSQL container %s is created. Waiting for SQL server to complete initialisation...\n", containerName)
+	fmt.Printf("MSSQL container %s is created. Waiting for SQL server to complete initialisation...\n", params.ContainerName)
 
 	time.Sleep(90 * time.Second)
 
@@ -239,23 +254,23 @@ func Restore(filename string, containerName string, password string, databaseNam
 	restoreArgs := []string{
 		"exec",
 		"-t",
-		containerName,
+		params.ContainerName,
 		"/opt/mssql-tools/bin/sqlcmd",
 		"-S",
 		".",
 		"-U",
 		"sa",
 		"-P",
-		password,
+		params.Password,
 		"-Q",
-		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'/var/backups/%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '/var/opt/mssql/data/%s.mdf', MOVE '%s' TO '/var/opt/mssql/data/%s.ldf'", databaseName, filename, dataName, databaseName, logName, databaseName),
+		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'/var/backups/%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '/var/opt/mssql/data/%s.mdf', MOVE '%s' TO '/var/opt/mssql/data/%s.ldf'", params.DatabaseName, params.Filename, params.DataName, params.DatabaseName, params.LogName, params.DatabaseName),
 	}
 
 	_, err := execute(restoreArgs)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Restore has been completed (as database %s).\n", databaseName)
+	fmt.Printf("Restore has been completed (as database %s).\n", params.DatabaseName)
 	return nil
 }
 
@@ -382,4 +397,12 @@ func createSQLCommandContainer() (string, error) {
 		return "", err
 	}
 	return "mssql-sqlcmd", nil
+}
+
+func getPathToBak(params *BaseRestoreParameters) string {
+	if params.DownloadDirectory != "" {
+		return filepath.Join(params.DownloadDirectory, params.Filename)
+	}
+	currentDirectory, _ := os.Getwd()
+	return filepath.Join(currentDirectory, params.Filename)
 }

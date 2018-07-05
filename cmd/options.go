@@ -40,6 +40,10 @@ type basicDownloadOptions struct {
 	bucketName string
 }
 
+type localDownloadOptions struct {
+	downloadDirectory string
+}
+
 type serverOptions struct {
 	server         string
 	serverUsername string
@@ -57,6 +61,7 @@ type restoreOptions struct {
 	dockerRestoreOptions
 	basicBackupOptions
 	basicRestoreOptions
+	localDownloadOptions
 }
 
 type downloadOptions struct {
@@ -66,6 +71,7 @@ type downloadOptions struct {
 	dockerRestoreOptions
 	basicBackupOptions
 	basicDownloadOptions
+	localDownloadOptions
 	isRestore bool
 }
 
@@ -76,6 +82,7 @@ type createOptions struct {
 	basicBackupOptions
 	serverOptions
 	basicDownloadOptions
+	localDownloadOptions
 	isNative            bool
 	isDownload          bool
 	isWaitForCompletion bool
@@ -113,6 +120,10 @@ func bindBasicDownloadOptions(flags *pflag.FlagSet, opts *basicDownloadOptions) 
 	flags.StringVarP(&opts.bucketName, "bucket", "b", "", "Bucket name")
 }
 
+func bindLocalDownloadOptions(flags *pflag.FlagSet, opts *localDownloadOptions) {
+	flags.StringVar(&opts.downloadDirectory, "download-directory", "", "Path to the directory where backup from AWS S3 located")
+}
+
 func bindServerOptions(flags *pflag.FlagSet, opts *serverOptions) {
 	flags.StringVarP(&opts.server, "server", "s", "", "Source SQL server")
 	flags.StringVarP(&opts.serverUsername, "username", "u", "", "Source SQL server login name")
@@ -130,6 +141,7 @@ func bindRestoreOptions(flags *pflag.FlagSet, opts *restoreOptions) {
 	bindDockerRestoreOptions(flags, &opts.dockerRestoreOptions)
 	bindBasicBackupOptions(flags, &opts.basicBackupOptions)
 	bindBasicRestoreOptions(flags, &opts.basicRestoreOptions)
+	bindLocalDownloadOptions(flags, &opts.localDownloadOptions)
 }
 
 func bindDownloadOptions(flags *pflag.FlagSet, opts *downloadOptions) {
@@ -138,6 +150,7 @@ func bindDownloadOptions(flags *pflag.FlagSet, opts *downloadOptions) {
 	bindNativeRestoreOptions(flags, &opts.nativeRestoreOptions)
 	bindDockerRestoreOptions(flags, &opts.dockerRestoreOptions)
 	bindBasicBackupOptions(flags, &opts.basicBackupOptions)
+	bindLocalDownloadOptions(flags, &opts.localDownloadOptions)
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
 }
 
@@ -148,6 +161,7 @@ func bindCreateOptions(flags *pflag.FlagSet, opts *createOptions) {
 	bindBasicBackupOptions(flags, &opts.basicBackupOptions)
 	bindServerOptions(flags, &opts.serverOptions)
 	bindBasicDownloadOptions(flags, &opts.basicDownloadOptions)
+	bindLocalDownloadOptions(flags, &opts.localDownloadOptions)
 	flags.BoolVarP(&opts.isNative, "native", "n", false, "Restore to local native SQL server")
 	flags.BoolVarP(&opts.isWaitForCompletion, "wait", "w", false, "Wait for backup to complete")
 	flags.BoolVar(&opts.isDownload, "download", false, "Create and download the backup")

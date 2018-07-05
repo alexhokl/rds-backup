@@ -10,20 +10,23 @@ import (
 )
 
 // DownloadBackup downloads a SQL backup from a S3 bucket
-func DownloadBackup(bucketName string, filename string) error {
+func DownloadBackup(bucketName string, filename string, downloadDirectory string) error {
+	currentDirectory, _ := os.Getwd()
+	pathToBak := filepath.Join(currentDirectory, filename)
+	if downloadDirectory != "" {
+		pathToBak = filepath.Join(downloadDirectory, filename)
+	}
 	args := []string{
 		"s3",
 		"cp",
 		fmt.Sprintf("s3://%s/%s", bucketName, filename),
-		filename,
+		pathToBak,
 	}
 
 	fmt.Printf("Download of backup from AWS S3 (s3://%s/%s) started...\n", bucketName, filename)
 	_, err := executeCommand(args)
 
 	if err == nil {
-		currentDirectory, _ := os.Getwd()
-		pathToBak := filepath.Join(currentDirectory, filename)
 		fmt.Printf("Download of the backup has been completed (%s)\n", pathToBak)
 	}
 
