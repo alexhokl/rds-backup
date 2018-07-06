@@ -150,6 +150,7 @@ func bindDownloadOptions(flags *pflag.FlagSet, opts *downloadOptions) {
 	bindNativeRestoreOptions(flags, &opts.nativeRestoreOptions)
 	bindDockerRestoreOptions(flags, &opts.dockerRestoreOptions)
 	bindBasicBackupOptions(flags, &opts.basicBackupOptions)
+	bindBasicDownloadOptions(flags, &opts.basicDownloadOptions)
 	bindLocalDownloadOptions(flags, &opts.localDownloadOptions)
 	flags.BoolVarP(&opts.isRestore, "restore", "r", false, "Restore backup in a docker container")
 }
