@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -28,9 +27,6 @@ type NativeClient struct{}
 
 // IsEnvironmentSatisfied returns if this client can be run on this machine
 func (c *NativeClient) IsEnvironmentSatisfied() bool {
-	if runtime.GOOS == "linux" {
-		return false
-	}
 	args := []string{"-?"}
 	_, err := executeSQLCmd(args)
 	if err != nil {
