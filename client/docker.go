@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 // DatabaseParameters contains the database information
@@ -82,8 +79,8 @@ type DockerSQLClient struct {
 }
 
 // IsEnvironmentSatisfied returns if this client can be ran on this machine
-func (c *DockerSQLClient) IsEnvironmentSatisfied() bool {
-	if !isDockerInstalled() {
+func (c *DockerSQLClient) IsEnvironmentSatisfied(cmdLine Command) bool {
+	if !isDockerInstalled(cmdLine) {
 		return false
 	}
 	if !isDockerContentTrustDisabled() {
@@ -91,12 +88,12 @@ func (c *DockerSQLClient) IsEnvironmentSatisfied() bool {
 		return false
 	}
 
-	serverContainerName := getSQLServerContainerName()
+	serverContainerName := getSQLServerContainerName(cmdLine)
 	if serverContainerName == "" {
-		if isSQLCommandContainerExist() {
-			removeSQLCommandContainer()
+		if isSQLCommandContainerExist(cmdLine) {
+			removeSQLCommandContainer(cmdLine)
 		}
-		containerName, errCreate := createSQLCommandContainer()
+		containerName, errCreate := createSQLCommandContainer(cmdLine)
 		if errCreate != nil {
 			return false
 		}
@@ -114,7 +111,7 @@ func (c *DockerSQLClient) IsEnvironmentSatisfied() bool {
 }
 
 // GetStatus returns the status of the latest backup
-func (c *DockerSQLClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c *DockerSQLClient) GetStatus(cmdLine Command, params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -132,7 +129,7 @@ func (c *DockerSQLClient) GetStatus(params *DatabaseParameters, taskID string) (
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
 	args := getCommandArgs(c.clientContainerName, params, statement)
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -140,7 +137,7 @@ func (c *DockerSQLClient) GetStatus(params *DatabaseParameters, taskID string) (
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func (c *DockerSQLClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c *DockerSQLClient) GetCompletionPercentage(cmdLine Command, params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -153,7 +150,7 @@ func (c *DockerSQLClient) GetCompletionPercentage(params *DatabaseParameters) (s
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getCommandArgs(c.clientContainerName, params, statement)
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -161,7 +158,7 @@ func (c *DockerSQLClient) GetCompletionPercentage(params *DatabaseParameters) (s
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func (c *DockerSQLClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c *DockerSQLClient) GetTaskMessage(cmdLine Command, params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -174,7 +171,7 @@ func (c *DockerSQLClient) GetTaskMessage(params *DatabaseParameters) (string, er
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getCommandArgs(c.clientContainerName, params, statement)
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -182,7 +179,7 @@ func (c *DockerSQLClient) GetTaskMessage(params *DatabaseParameters) (string, er
 }
 
 // StartBackup creates a new backup
-func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) {
+func (c *DockerSQLClient) StartBackup(cmdLine Command, params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s
@@ -202,7 +199,7 @@ func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) 
 		params.Filename)
 
 	args := getCommandArgs(c.clientContainerName, &params.DatabaseParameters, statement)
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -214,7 +211,7 @@ func (c *DockerSQLClient) StartBackup(params *BackupParameters) (string, error) 
 }
 
 // Restore creates a Docker container and restores the specified backup onto it
-func Restore(params *RestoreParameters) error {
+func Restore(cmdLine Command, params *RestoreParameters) error {
 	pathToBak := getPathToBak(&params.BaseRestoreParameters)
 	_, errFile := os.Stat(pathToBak)
 	if errFile != nil {
@@ -240,7 +237,7 @@ func Restore(params *RestoreParameters) error {
 
 	fmt.Printf("Starting to restore from file %s onto a SQL Server in Docker container...\n", pathToBak)
 
-	_, errCreate := execute(createArgs)
+	_, errCreate := execute(cmdLine, createArgs)
 	if errCreate != nil {
 		return errCreate
 	}
@@ -266,7 +263,7 @@ func Restore(params *RestoreParameters) error {
 		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'/var/backups/%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '/var/opt/mssql/data/%s.mdf', MOVE '%s' TO '/var/opt/mssql/data/%s.ldf'", params.DatabaseName, params.Filename, params.DataName, params.DatabaseName, params.LogName, params.DatabaseName),
 	}
 
-	_, err := execute(restoreArgs)
+	_, err := execute(cmdLine, restoreArgs)
 	if err != nil {
 		return err
 	}
@@ -275,17 +272,17 @@ func Restore(params *RestoreParameters) error {
 }
 
 // GetLogicalNames retrieve logical names of MDF and LDF
-func (c *DockerSQLClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+func (c *DockerSQLClient) GetLogicalNames(cmdLine Command, params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
-	outputData, errData := execute(getCommandArgs(c.clientContainerName, params, dataNameQuery))
+	outputData, errData := execute(cmdLine, getCommandArgs(c.clientContainerName, params, dataNameQuery))
 	if errData != nil {
 		return "", "", errData
 	}
 	dataName := getSQLOutput(outputData)
 
-	outputLog, errLog := execute(getCommandArgs(c.clientContainerName, params, logNameQuery))
+	outputLog, errLog := execute(cmdLine, getCommandArgs(c.clientContainerName, params, logNameQuery))
 	if errLog != nil {
 		return "", "", errLog
 	}
@@ -294,22 +291,22 @@ func (c *DockerSQLClient) GetLogicalNames(params *DatabaseParameters) (string, s
 	return dataName, logName, nil
 }
 
-func execute(args []string) (string, error) {
-	if viper.GetBool("verbose") {
-		fmt.Println("Command executed:", "docker", args)
-	}
-	byteOutput, err := exec.Command("docker", args...).Output()
+func execute(c Command, args []string) (string, error) {
+	output, err := c.Execute("docker", args)
 	if err != nil {
 		if strings.Contains(err.Error(), "125") {
-			return string(byteOutput), errors.New("Please disable DOCKER_CONTENT_TRUST")
+			return output, errors.New("Please disable DOCKER_CONTENT_TRUST")
 		}
 	}
-	return string(byteOutput), err
+	return output, nil
 }
 
 func getSQLOutput(rawOutput string) string {
 	lines := strings.Split(rawOutput, "\n")
-	return strings.TrimSpace(lines[2])
+	if len(lines) >= 2 {
+		return strings.TrimSpace(lines[2])
+	}
+	return ""
 }
 
 func getCommandArgs(clientContainerName string, params *DatabaseParameters, statement string) []string {
@@ -331,8 +328,8 @@ func getCommandArgs(clientContainerName string, params *DatabaseParameters, stat
 	}
 }
 
-func isDockerInstalled() bool {
-	_, err := execute([]string{"help"})
+func isDockerInstalled(cmdLine Command) bool {
+	_, err := execute(cmdLine, []string{"help"})
 	return err == nil
 }
 
@@ -340,7 +337,7 @@ func isDockerContentTrustDisabled() bool {
 	return os.Getenv("DOCKER_CONTENT_TRUST") != "1"
 }
 
-func getSQLServerContainerName() string {
+func getSQLServerContainerName(cmdLine Command) string {
 	args := []string{
 		"ps",
 		"-f",
@@ -350,14 +347,14 @@ func getSQLServerContainerName() string {
 		"--format",
 		"{{.Names}}",
 	}
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return ""
 	}
 	return strings.Split(output, "\n")[0]
 }
 
-func isSQLCommandContainerExist() bool {
+func isSQLCommandContainerExist(cmdLine Command) bool {
 	args := []string{
 		"ps",
 		"-a",
@@ -366,23 +363,23 @@ func isSQLCommandContainerExist() bool {
 		"--format",
 		"{{.Names}}",
 	}
-	output, err := execute(args)
+	output, err := execute(cmdLine, args)
 	if err != nil {
 		return false
 	}
 	return strings.Split(output, "\n")[0] != ""
 }
 
-func removeSQLCommandContainer() error {
+func removeSQLCommandContainer(cmdLine Command) error {
 	args := []string{
 		"rm",
 		"mssql-sqlcmd",
 	}
-	_, err := execute(args)
+	_, err := execute(cmdLine, args)
 	return err
 }
 
-func createSQLCommandContainer() (string, error) {
+func createSQLCommandContainer(cmdLine Command) (string, error) {
 	args := []string{
 		"run",
 		"--name",
@@ -392,7 +389,7 @@ func createSQLCommandContainer() (string, error) {
 		"-d",
 		"microsoft/mssql-server-linux",
 	}
-	_, err := execute(args)
+	_, err := execute(cmdLine, args)
 	if err != nil {
 		return "", err
 	}

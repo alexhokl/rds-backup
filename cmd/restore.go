@@ -44,7 +44,8 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runRestore()
+			cmdLine := &client.CommandLine{}
+			err := runRestore(cmdLine)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -57,7 +58,7 @@ func init() {
 	RootCmd.AddCommand(restoreCmd)
 }
 
-func runRestore() error {
+func runRestore(cmdLine client.Command) error {
 	basicRestoreParameters := client.BaseRestoreParameters{
 		Filename:          viper.GetString("filename"),
 		DatabaseName:      viper.GetString("database"),
@@ -72,7 +73,7 @@ func runRestore() error {
 			CustomDataPath:        viper.GetString("restore-data-directory"),
 			ServerPath:            viper.GetString("restore-server-directory"),
 		}
-		errNative := client.RestoreNative(nativeParameters)
+		errNative := client.RestoreNative(cmdLine, nativeParameters)
 		if errNative != nil {
 			return errNative
 		}
@@ -84,7 +85,7 @@ func runRestore() error {
 		Password:              viper.GetString("restore-password"),
 		Port:                  viper.GetInt("port"),
 	}
-	errRestore := client.Restore(restoreParameters)
+	errRestore := client.Restore(cmdLine, restoreParameters)
 	if errRestore != nil {
 		return errRestore
 	}

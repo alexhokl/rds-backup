@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/spf13/viper"
 )
 
 // NativeRestoreParameters contains restore information
@@ -26,9 +23,9 @@ const DefaultServerInstallationPath = "C:\\Program Files\\Microsoft SQL Server\\
 type NativeClient struct{}
 
 // IsEnvironmentSatisfied returns if this client can be run on this machine
-func (c *NativeClient) IsEnvironmentSatisfied() bool {
+func (c *NativeClient) IsEnvironmentSatisfied(cmdLine Command) bool {
 	args := []string{"-?"}
-	_, err := executeSQLCmd(args)
+	_, err := executeSQLCmd(cmdLine, args)
 	if err != nil {
 		return false
 	}
@@ -36,7 +33,7 @@ func (c *NativeClient) IsEnvironmentSatisfied() bool {
 }
 
 // GetStatus returns the status of the latest backup
-func (c *NativeClient) GetStatus(params *DatabaseParameters, taskID string) (string, error) {
+func (c *NativeClient) GetStatus(cmdLine Command, params *DatabaseParameters, taskID string) (string, error) {
 	query := "SELECT TOP 1 lifecycle FROM @s"
 	if taskID != "" {
 		query = fmt.Sprintf("SELECT lifecycle FROM @s WHERE task_id = %s", taskID)
@@ -54,7 +51,7 @@ func (c *NativeClient) GetStatus(params *DatabaseParameters, taskID string) (str
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName, query)
 
 	args := getSQLCommandArgs(params, statement)
-	output, err := executeSQLCmd(args)
+	output, err := executeSQLCmd(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +59,7 @@ func (c *NativeClient) GetStatus(params *DatabaseParameters, taskID string) (str
 }
 
 // GetCompletionPercentage returns the percentage of completion of the latest backup
-func (c *NativeClient) GetCompletionPercentage(params *DatabaseParameters) (string, error) {
+func (c *NativeClient) GetCompletionPercentage(cmdLine Command, params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -75,7 +72,7 @@ func (c *NativeClient) GetCompletionPercentage(params *DatabaseParameters) (stri
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getSQLCommandArgs(params, statement)
-	output, err := executeSQLCmd(args)
+	output, err := executeSQLCmd(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -83,7 +80,7 @@ func (c *NativeClient) GetCompletionPercentage(params *DatabaseParameters) (stri
 }
 
 // GetTaskMessage returns the message of the latest backup task
-func (c *NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error) {
+func (c *NativeClient) GetTaskMessage(cmdLine Command, params *DatabaseParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 	%s
@@ -96,7 +93,7 @@ func (c *NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error
 	SET NOCOUNT OFF`, statusTableDeclaration, params.DatabaseName)
 
 	args := getSQLCommandArgs(params, statement)
-	output, err := executeSQLCmd(args)
+	output, err := executeSQLCmd(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +101,7 @@ func (c *NativeClient) GetTaskMessage(params *DatabaseParameters) (string, error
 }
 
 // StartBackup creates a new backup
-func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
+func (c *NativeClient) StartBackup(cmdLine Command, params *BackupParameters) (string, error) {
 	statement := fmt.Sprintf(`SET NOCOUNT ON
 
 		%s
@@ -124,7 +121,7 @@ func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
 		params.Filename)
 
 	args := getSQLCommandArgs(&params.DatabaseParameters, statement)
-	output, err := executeSQLCmd(args)
+	output, err := executeSQLCmd(cmdLine, args)
 	if err != nil {
 		return "", err
 	}
@@ -136,17 +133,17 @@ func (c *NativeClient) StartBackup(params *BackupParameters) (string, error) {
 }
 
 // GetLogicalNames returns the logical names of MDF and LDF
-func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, string, error) {
+func (c *NativeClient) GetLogicalNames(cmdLine Command, params *DatabaseParameters) (string, string, error) {
 	dataNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 0"
 	logNameQuery := "SELECT name FROM sys.master_files WHERE database_id = db_id() AND type = 1"
 
-	outputData, errData := executeSQLCmd(getSQLCommandArgs(params, dataNameQuery))
+	outputData, errData := executeSQLCmd(cmdLine, getSQLCommandArgs(params, dataNameQuery))
 	if errData != nil {
 		return "", "", errData
 	}
 	dataName := getSQLOutput(outputData)
 
-	outputLog, errLog := executeSQLCmd(getSQLCommandArgs(params, logNameQuery))
+	outputLog, errLog := executeSQLCmd(cmdLine, getSQLCommandArgs(params, logNameQuery))
 	if errLog != nil {
 		return "", "", errLog
 	}
@@ -156,7 +153,7 @@ func (c *NativeClient) GetLogicalNames(params *DatabaseParameters) (string, stri
 }
 
 // RestoreNative restores a backup onto a local instance of SQL server
-func RestoreNative(params *NativeRestoreParameters) error {
+func RestoreNative(cmdLine Command, params *NativeRestoreParameters) error {
 	pathToBak := getPathToBak(&params.BaseRestoreParameters)
 	_, errFile := os.Stat(pathToBak)
 	if errFile != nil {
@@ -197,7 +194,7 @@ func RestoreNative(params *NativeRestoreParameters) error {
 		fmt.Sprintf("RESTORE DATABASE %s FROM DISK=N'%s' WITH FILE=1, NOUNLOAD, REPLACE, STATS=5, MOVE '%s' TO '%s', MOVE '%s' TO '%s'", params.DatabaseName, pathToBackup, params.DataName, mdfPath, params.LogName, ldfPath),
 	}
 
-	_, err := executeSQLCmd(restoreArgs)
+	_, err := executeSQLCmd(cmdLine, restoreArgs)
 	if err != nil {
 		return err
 	}
@@ -212,12 +209,8 @@ func RestoreNative(params *NativeRestoreParameters) error {
 	return nil
 }
 
-func executeSQLCmd(args []string) (string, error) {
-	if viper.GetBool("verbose") {
-		fmt.Println("Command executed:", "sqlcmd", args)
-	}
-	byteOutput, err := exec.Command("sqlcmd", args...).Output()
-	return string(byteOutput), err
+func executeSQLCmd(cmdLine Command, args []string) (string, error) {
+	return cmdLine.Execute("sqlcmd", args)
 }
 
 func getSQLCommandArgs(params *DatabaseParameters, statement string) []string {

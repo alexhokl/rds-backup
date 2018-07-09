@@ -44,7 +44,8 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runStatus()
+			cmdLine := &client.CommandLine{}
+			err := runStatus(cmdLine)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -57,7 +58,7 @@ func init() {
 	RootCmd.AddCommand(statusCmd)
 }
 
-func runStatus() error {
+func runStatus(cmdLine client.Command) error {
 	params := &client.DatabaseParameters{
 		Server:       viper.GetString("server"),
 		Username:     viper.GetString("username"),
@@ -65,18 +66,18 @@ func runStatus() error {
 		DatabaseName: viper.GetString("database"),
 	}
 
-	c := client.GetClient()
+	c := client.GetClient(cmdLine)
 	if c == nil {
 		return errors.New("Unable to find a sqlcmd client")
 	}
 
-	output, err := c.GetStatus(params, "")
+	output, err := c.GetStatus(cmdLine, params, "")
 	if err != nil {
 		return err
 	}
 
 	if output == "ERROR" {
-		errorMessage, errErr := c.GetTaskMessage(params)
+		errorMessage, errErr := c.GetTaskMessage(cmdLine, params)
 		if errErr != nil {
 			return errErr
 		}

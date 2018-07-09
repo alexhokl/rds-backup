@@ -23,4 +23,6 @@ clean:
 	rm $(OUTPUT_LINUX)
 	rm $(OUTPUT_MAC)
 	rm $(OUTPUT_WINDOWS)
+cover:
+	go test -coverprofile=cover.out ./... && go tool cover -html=cover.out
 

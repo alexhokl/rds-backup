@@ -3,14 +3,11 @@ package client
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-
-	"github.com/spf13/viper"
 )
 
 // DownloadBackup downloads a SQL backup from a S3 bucket
-func DownloadBackup(bucketName string, filename string, downloadDirectory string) error {
+func DownloadBackup(c Command, bucketName string, filename string, downloadDirectory string) error {
 	currentDirectory, _ := os.Getwd()
 	pathToBak := filepath.Join(currentDirectory, filename)
 	if downloadDirectory != "" {
@@ -24,7 +21,7 @@ func DownloadBackup(bucketName string, filename string, downloadDirectory string
 	}
 
 	fmt.Printf("Download of backup from AWS S3 (s3://%s/%s) started...\n", bucketName, filename)
-	_, err := executeCommand(args)
+	_, err := executeCommand(c, args)
 
 	if err == nil {
 		fmt.Printf("Download of the backup has been completed (%s)\n", pathToBak)
@@ -34,21 +31,17 @@ func DownloadBackup(bucketName string, filename string, downloadDirectory string
 }
 
 // IsAwsCliInstalled returns if AWS CLI has been installed
-func IsAwsCliInstalled() bool {
-	_, err := executeCommand([]string{"help"})
+func IsAwsCliInstalled(c Command) bool {
+	_, err := executeCommand(c, []string{"help"})
 	return err == nil
 }
 
 // IsAwsCredentialsConfigured returns if AWS CLI credentials has been configured
-func IsAwsCredentialsConfigured() bool {
-	_, err := executeCommand([]string{"s3", "ls"})
+func IsAwsCredentialsConfigured(c Command) bool {
+	_, err := executeCommand(c, []string{"s3", "ls"})
 	return err == nil
 }
 
-func executeCommand(args []string) (string, error) {
-	if viper.GetBool("verbose") {
-		fmt.Println("Command executed:", "aws", args)
-	}
-	byteOutput, err := exec.Command("aws", args...).Output()
-	return string(byteOutput), err
+func executeCommand(c Command, args []string) (string, error) {
+	return c.Execute("aws", args)
 }

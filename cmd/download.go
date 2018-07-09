@@ -45,7 +45,8 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runDownload()
+			cmdLine := &client.CommandLine{}
+			err := runDownload(cmdLine)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -58,15 +59,15 @@ func init() {
 	RootCmd.AddCommand(downloadCmd)
 }
 
-func runDownload() error {
-	if !client.IsAwsCliInstalled() {
+func runDownload(cmdLine client.Command) error {
+	if !client.IsAwsCliInstalled(cmdLine) {
 		return errors.New("AWS CLI is required")
 	}
-	if !client.IsAwsCredentialsConfigured() {
+	if !client.IsAwsCredentialsConfigured(cmdLine) {
 		return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
 	}
 
-	errDownload := client.DownloadBackup(viper.GetString("bucket"), viper.GetString("filename"), viper.GetString("download-directory"))
+	errDownload := client.DownloadBackup(cmdLine, viper.GetString("bucket"), viper.GetString("filename"), viper.GetString("download-directory"))
 	if errDownload != nil {
 		return errDownload
 	}
@@ -86,7 +87,7 @@ func runDownload() error {
 				CustomDataPath:        viper.GetString("restore-data-directory"),
 				ServerPath:            viper.GetString("restore-server-directory"),
 			}
-			errNative := client.RestoreNative(nativeParameters)
+			errNative := client.RestoreNative(cmdLine, nativeParameters)
 			if errNative != nil {
 				return errNative
 			}
@@ -98,7 +99,7 @@ func runDownload() error {
 			Password:              viper.GetString("restore-password"),
 			Port:                  viper.GetInt("port"),
 		}
-		errRestore := client.Restore(restoreParameters)
+		errRestore := client.Restore(cmdLine, restoreParameters)
 		if errRestore != nil {
 			return errRestore
 		}

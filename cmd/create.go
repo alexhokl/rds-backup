@@ -46,7 +46,8 @@ func init() {
 				cmd.HelpFunc()(cmd, args)
 				return
 			}
-			err := runCreate()
+			cmdLine := &client.CommandLine{}
+			err := runCreate(cmdLine)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -59,12 +60,12 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 }
 
-func runCreate() error {
+func runCreate(cmdLine client.Command) error {
 	if viper.GetBool("download") || viper.GetBool("restore") {
-		if !client.IsAwsCliInstalled() {
+		if !client.IsAwsCliInstalled(cmdLine) {
 			return errors.New("AWS CLI is required")
 		}
-		if !client.IsAwsCredentialsConfigured() {
+		if !client.IsAwsCredentialsConfigured(cmdLine) {
 			return errors.New("AWS CLI credentials are not configured yet. Please try 'aws configure'")
 		}
 	}
@@ -80,7 +81,7 @@ func runCreate() error {
 		Filename:   viper.GetString("filename"),
 	}
 
-	c := client.GetClient()
+	c := client.GetClient(cmdLine)
 	if c == nil {
 		return errors.New("Unable to find a sqlcmd client")
 	}
@@ -88,7 +89,7 @@ func runCreate() error {
 	dataLogicalName := ""
 	logLogicalName := ""
 	if viper.GetBool("restore") {
-		dataName, logName, errLogicalNames := c.GetLogicalNames(&params.DatabaseParameters)
+		dataName, logName, errLogicalNames := c.GetLogicalNames(cmdLine, &params.DatabaseParameters)
 		if errLogicalNames != nil {
 			return errLogicalNames
 		}
@@ -96,7 +97,7 @@ func runCreate() error {
 		logLogicalName = logName
 	}
 
-	taskID, err := c.StartBackup(params)
+	taskID, err := c.StartBackup(cmdLine, params)
 	if err != nil {
 		return err
 	}
@@ -106,7 +107,7 @@ func runCreate() error {
 	fmt.Printf("Backup task [%s] started...", taskID)
 
 	if viper.GetBool("download") || viper.GetBool("wait") || viper.GetBool("restore") {
-		errBackup := isBackupCompleted(c, params, taskID)
+		errBackup := isBackupCompleted(c, cmdLine, params, taskID)
 		if errBackup != nil {
 			return errBackup
 		}
@@ -114,7 +115,7 @@ func runCreate() error {
 	}
 
 	if viper.GetBool("download") || viper.GetBool("restore") {
-		errDownload := client.DownloadBackup(params.BucketName, params.Filename, viper.GetString("download-directory"))
+		errDownload := client.DownloadBackup(cmdLine, params.BucketName, params.Filename, viper.GetString("download-directory"))
 		if errDownload != nil {
 			return errDownload
 		}
@@ -135,7 +136,7 @@ func runCreate() error {
 				CustomDataPath:        viper.GetString("restore-data-directory"),
 				ServerPath:            viper.GetString("restore-server-directory"),
 			}
-			errNative := client.RestoreNative(nativeParameters)
+			errNative := client.RestoreNative(cmdLine, nativeParameters)
 			if errNative != nil {
 				return errNative
 			}
@@ -147,7 +148,7 @@ func runCreate() error {
 			Password:              viper.GetString("restore-password"),
 			Port:                  viper.GetInt("port"),
 		}
-		errRestore := client.Restore(restoreParameters)
+		errRestore := client.Restore(cmdLine, restoreParameters)
 		if errRestore != nil {
 			return errRestore
 		}
@@ -156,14 +157,14 @@ func runCreate() error {
 	return nil
 }
 
-func isBackupCompleted(c client.SQLClient, params *client.BackupParameters, taskID string) error {
+func isBackupCompleted(c client.SQLClient, cmdLine client.Command, params *client.BackupParameters, taskID string) error {
 	done := false
 	var err error
 
 	for !done {
 		fmt.Printf(".")
 		time.Sleep(5 * time.Second)
-		done, err = isBackupDone(c, &params.DatabaseParameters, taskID)
+		done, err = isBackupDone(c, cmdLine, &params.DatabaseParameters, taskID)
 		if err != nil {
 			return err
 		}
@@ -177,13 +178,13 @@ func isBackupCompleted(c client.SQLClient, params *client.BackupParameters, task
 	return nil
 }
 
-func isBackupDone(c client.SQLClient, params *client.DatabaseParameters, taskID string) (bool, error) {
-	status, err := c.GetStatus(params, taskID)
+func isBackupDone(c client.SQLClient, cmdLine client.Command, params *client.DatabaseParameters, taskID string) (bool, error) {
+	status, err := c.GetStatus(cmdLine, params, taskID)
 	if err != nil {
 		return false, err
 	}
 	if status == "ERROR" {
-		errorMessage, errErr := c.GetTaskMessage(params)
+		errorMessage, errErr := c.GetTaskMessage(cmdLine, params)
 		if errErr != nil {
 			return false, errErr
 		}
