@@ -1,13 +1,13 @@
 language: go
-
 go:
   - "1.10.3"
-
-#install:
-#  - go get -t ./...
-#  - go get code.google.com/p/go.tools/cmd/cover
-#  - go get github.com/mattn/goveralls
-
-#script:
-#  - PATH="$HOME/gopath/bin:$PATH"
-#  - coverage --coveralls
+  - tip
+install:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+script:
+  - go get -t ./...
+  - go test -v -covermode=count -coverprofile=coverage.out ./...
+  - $(go env GOPATH | awk 'BEGIN{FS=":"} {print $1}')/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+env:
+  secure: "LJK6Y9XIVWkHZe/5jsQ1aKORrDCgMqNeN7ZswhWtibqjoNC9qQAaKenBCvqoExSFt6XLBExC50sEe8f4niJbyyUl+XznE6b5QfN4L9+g1h24Gjg5mv7+odAuRC7Jq3eddIOauaK7j8oQ3PGr6hrOiboxlK7Y61b1sUmkAZWndx4A/5QGQeJjQeh64um2KenJhWE/R0/8ee3wT1EBVR9jDBVSKsl3ZgXHlEmLDDoRk1mlRcjux8t8/vy1OBIVCV6WsZm9tooGRGb1BFpjQZlFV9lupVeXDF1wwl80hBFAZ5OysCP6VJRIFf/ih5LbcrbLwQDnJgd2Q7QFWPYTJwghrKTAjZ3fMxBlRQq5VbQpKoOyJ94pC0ErpyCqJCt5QZFqnCt1xXEWmEpKS60bf7R0uGOiZyWib2fEt+7x5T5SftJ/a1pK7srJhXN8doRUNvP5TFATfb4JcVoobI/zqaXKQGuy2x99xCawtPDBuSS4FFoYRwRykYKrlkheUhGqTChS2UNrfeQe+El+gH/KYTW2UNHU7xqkdZ346vrxb/KzILHWG887UFV+ImdK8h4izzjOFD/tNpQEVqmiCXld5rdOw09teqsnIBvuNTmgvBrOEIr6cZbMtAc3BtqrwMiKDk/2S3QTfkenHaEdrL1ziomekI1xNKlC9RKwrFH84ehkp5I="
