@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/alexhokl/helper/cli"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var cfgFile string
@@ -30,8 +29,8 @@ var RootCmd = &cobra.Command{
 	Use:   "rds-backup",
 	Short: "Manages backup operations of MSSQL servers on AWS RDS",
 	Long: `Manages backup operations of MSSQL servers on AWS RDS
-	
-			For documentation or bug report, please visit 
+
+			For documentation or bug report, please visit
 			https://github.com/alexhokl/rds-backup/`,
 }
 
@@ -55,28 +54,5 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".rds-backup" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".rds-backup")
-	}
-
-	viper.SetEnvPrefix("rds_backup")
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	cli.ConfigureViper(cfgFile, "rds-backup", true, "")
 }
